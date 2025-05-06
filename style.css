@@ -1,0 +1,135 @@
+body {
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 20px;
+}
+
+/* NEW: Container for the board and labels */
+#board-area {
+    display: grid;
+    /* Define grid: Row labels col | Game board col */
+    /* Game board row | Col labels row   */
+    grid-template-columns: 30px auto; /* Width for row labels, rest for board */
+    grid-template-rows: auto 30px;    /* Height for board, height for col labels */
+    width: fit-content; /* Adjust width to content */
+    margin: 20px auto; /* Center the area */
+    gap: 5px; /* Optional gap between labels and board */
+}
+
+/* Positioning the elements within the grid */
+#row-labels {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+    /* Style the labels */
+    display: flex;
+    flex-direction: column; /* Stack numbers vertically */
+    justify-content: space-around; /* Distribute space evenly */
+    align-items: center; /* Center numbers horizontally */
+    font-weight: bold;
+    color: #555;
+}
+
+#game-board {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+    /* Keep existing game board styles */
+    width: 350px;
+    height: 350px;
+    border: 2px solid black;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(7, 1fr);
+    /* margin-bottom: 0; Remove margin if previously set */
+}
+
+.corner-spacer { /* Styles the empty bottom-left cell */
+    grid-column: 1 / 2;
+    grid-row: 2 / 3;
+    /* background-color: #f0f0f0; /* Optional: for debugging */
+}
+
+#col-labels {
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+    /* Style the labels */
+    display: flex;
+    flex-direction: row; /* Align letters horizontally */
+    justify-content: space-around; /* Distribute space evenly */
+    align-items: center; /* Center letters vertically */
+    font-weight: bold;
+    color: #555;
+}
+
+
+/* --- Existing styles for squares, tokens, etc. remain below --- */
+
+.square {
+    border: 1px solid #ccc;
+    background-color: #eee;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+    transition: background-color 0.2s ease;
+}
+
+.square:hover {
+    background-color: #ddd;
+}
+
+/* Style for the black token */
+.token {
+    width: 80%;
+    height: 80%;
+    background-color: black;
+    border-radius: 50%;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+}
+
+/* Style for the active white token */
+.white-token {
+    width: 80%;
+    height: 80%;
+    background-color: white;
+    border: 2px solid black;
+    border-radius: 50%;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+    box-sizing: border-box;
+}
+
+/* Common style for the numbered circles */
+.number-circle {
+    width: 70%;
+    height: 70%;
+    border: 2px solid black;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 18px;
+    color: black;
+    background-color: white;
+    box-sizing: border-box;
+    transition: background-color 0.3s ease;
+}
+
+/* Style for the highlighted goal circle */
+.number-circle.highlighted-goal {
+    background-color: lightgreen;
+    color: black;
+}
+
+/* Class added to squares occupied by a black token */
+.square.occupied {
+    cursor: not-allowed;
+}
+
+.square.occupied:hover {
+    background-color: #eee; /* Override hover effect if occupied */
+}

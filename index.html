@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>7x7 Game Board</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="jogo_module.js"></script>
+</head>
+<body>
+
+<h1>My 7x7 Game</h1>
+
+<div id="board-area">
+  <div id="row-labels">
+    <span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+  </div>
+  <div id="game-board"></div>
+  <div class="corner-spacer"></div>
+  <div id="col-labels">
+    <span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span>
+  </div>
+</div>
+
+<div style="margin-top: 15px;">
+  <button id="encode-button">Efetuar jogada da IA</button>
+</div>
+<div style="margin-top: 15px;">
+  <div id="encoded-output" style="margin-top: 5px; font-family: monospace; word-wrap: break-word;"></div>
+</div>
+
+<div style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
+  <label for="decode-input">Carregar um estado (Decimal BigInt):</label>
+  <input type="text" id="decode-input" size="30" placeholder="Paste encoded number here">
+  <button id="decode-button">Load Board</button>
+</div>
+
+<div id="decode-message" style="margin-top: 5px; color: red;"></div> <script src="script.js"></script>
+
+</body>
+</html>
