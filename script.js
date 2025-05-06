@@ -448,7 +448,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const winner = (moveCount % 2 === 0) ? 2 : 1;
 
             setTimeout(() => {
-                alert(`No moves available! Number ${winner} wins!`);
+                alert(`Encurralado! O jogador ${winner} ganha!`);
                 initGame(); // Reset game after no-move win
             }, 100);
             return; // Game ended
