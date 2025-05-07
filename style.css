@@ -133,3 +133,60 @@ body {
 .square.occupied:hover {
     background-color: #eee; /* Override hover effect if occupied */
 }
+
+#main-container {
+    display: flex; /* Organiza o tabuleiro e a tabela lado a lado */
+    flex-direction: row; /* Direção horizontal */
+    align-items: flex-start; /* Alinha os itens no topo */
+    gap: 20px; /* Espaço entre o tabuleiro e a tabela */
+    justify-content: center; /* Centraliza o conteúdo se houver espaço extra */
+    flex-wrap: wrap; /* Permite quebrar para a linha de baixo em telas menores */
+}
+
+#board-area {
+    /* O #board-area já tem estilos, certifique-se que não conflitam.
+       Pode ser necessário ajustar margens ou larguras se já definidas. */
+}
+
+#moves-area {
+    width: 400px; /* Largura da área da tabela, ajuste conforme necessário */
+    padding: 10px;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    max-height: 410px; /* Altura máxima igual à da board-area + labels (aprox) */
+    overflow-y: auto; /* Adiciona scroll se o conteúdo exceder a altura */
+}
+
+#moves-area h2 {
+    margin-top: 0;
+    text-align: center;
+    font-size: 1.2em;
+}
+
+#moves-table {
+    width: 100%;
+    border-collapse: collapse; /* Remove espaços entre as bordas das células */
+    font-size: 0.9em;
+}
+
+#moves-table th, #moves-table td {
+    border: 1px solid #ddd;
+    padding: 6px;
+    text-align: left;
+}
+
+#moves-table th {
+    background-color: #e9e9e9;
+    font-weight: bold;
+}
+
+#moves-table tbody tr:hover {
+    background-color: #f0f0f0;
+    cursor: pointer;
+}
+
+#moves-table tbody tr td:nth-child(4) { /* Coluna do estado codificado */
+    font-family: monospace;
+    font-size: 0.8em; /* Fonte menor para o estado codificado longo */
+    word-break: break-all; /* Quebra a linha se o estado for muito longo */
+}

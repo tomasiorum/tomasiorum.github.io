@@ -11,14 +11,33 @@
 
 <h1>Rastros 7x7</h1>
 
-<div id="board-area">
-  <div id="row-labels">
-    <span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+<div id="main-container">
+  <div id="board-area">
+    <div id="row-labels">
+      <span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+    </div>
+    <div id="game-board"></div>
+    <div class="corner-spacer"></div>
+    <div id="col-labels">
+      <span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span>
+    </div>
   </div>
-  <div id="game-board"></div>
-  <div class="corner-spacer"></div>
-  <div id="col-labels">
-    <span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span>
+
+  <div id="moves-area">
+    <h2>Histórico de Jogadas</h2>
+    <table id="moves-table">
+      <thead>
+      <tr>
+        <th>Nº</th>
+        <th>Jogador</th>
+        <th>Jogada</th>
+        <th>Estado (Codificado)</th>
+      </tr>
+      </thead>
+      <tbody>
+
+      </tbody>
+    </table>
   </div>
 </div>
 
@@ -35,7 +54,8 @@
   <button id="decode-button">Load Board</button>
 </div>
 
-<div id="decode-message" style="margin-top: 5px; color: red;"></div> <script src="script.js"></script>
+<div id="decode-message" style="margin-top: 5px; color: red;"></div>
+<script src="script.js"></script>
 
 </body>
 </html>
