@@ -190,3 +190,15 @@ body {
     font-size: 0.8em; /* Fonte menor para o estado codificado longo */
     word-break: break-all; /* Quebra a linha se o estado for muito longo */
 }
+
+#moves-table.table-interaction-disabled tbody tr {
+    cursor: not-allowed;
+}
+
+#moves-table.table-interaction-disabled tbody tr:hover {
+    background-color: initial; /* Prevents the hover background color change */
+    /* If 'initial' doesn't give the desired non-hover appearance,
+       you might need to set it explicitly to your row's default background,
+       e.g., background-color: transparent; or background-color: #f9f9f9;
+       depending on your non-hovered row style. */
+}
