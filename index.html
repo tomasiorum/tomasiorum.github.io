@@ -38,23 +38,26 @@
     </table>
   </div>
 </div>
-
+<div id="game-end-message" style="margin-top: 20px; text-align: center; font-size: 1.2em; font-weight: bold; color: blue;"></div>
 <div style="margin-top: 15px;">
   <button id="encode-button">Efetuar jogada da IA</button>
 </div>
-<div style="margin-top: 15px;">
-  <div id="encoded-output" style="margin-top: 5px; font-family: monospace; word-wrap: break-word;"></div>
+<div style="margin-top: 15px; ; visibility: collapse;">
+  <div id="encoded-output" style="margin-top: 5px; font-family: monospace; word-wrap: break-word"></div>
 </div>
 
-<div style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
+<div style="margin-top: 15px; display: flex; align-items: center; gap: 10px; visibility: collapse">
   <label for="decode-input">Carregar um estado (Decimal BigInt):</label>
   <input type="text" id="decode-input" size="30" placeholder="Paste encoded number here">
   <button id="decode-button">Load Board</button>
 </div>
 
-<div id="decode-message" style="margin-top: 5px; color: red;"></div>
+<div id="decode-message" style="margin-top: 5px; color: red; visibility: collapse"></div>
 
-<div id="game-end-message" style="margin-top: 20px; text-align: center; font-size: 1.2em; font-weight: bold; color: blue;"></div>
+<div style="text-align: center; margin-top: 20px; margin-bottom: 10px;">
+  <label for="game-value-slider">Dificuldade: <span id="current-slider-value">1</span></label><br>
+  <input type="range" id="game-value-slider" min="1" max="10" value="1">
+</div>
 <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
   <button id="new-game-button">Iniciar Novo Jogo</button>
 </div>

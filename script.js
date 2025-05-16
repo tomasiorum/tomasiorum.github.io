@@ -24,6 +24,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let decodeInputElement;
     let newGameButtonElement;
     let movesTableElement; // Reference to the <table> element
+    let gameValueSlider; // NOVO
+    let currentSliderValueDisplay; // NOVO
 
     aiButton = document.getElementById('encode-button');
     messageOutput = document.getElementById('decode-message');
@@ -32,6 +34,9 @@ document.addEventListener('DOMContentLoaded', function() {
     decodeInputElement = document.getElementById('decode-input');
     newGameButtonElement = document.getElementById('new-game-button');
     movesTableElement = document.getElementById('moves-table');
+    gameValueSlider = document.getElementById('game-value-slider'); // NOVO
+    currentSliderValueDisplay = document.getElementById('current-slider-value'); // NOVO
+
 
     movesTableBody = document.getElementById('moves-table')?.getElementsByTagName('tbody')[0];
     if (!movesTableBody) {
@@ -45,6 +50,18 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.error('New Game Button (id="new-game-button") not found in the DOM!');
     }
+
+    // NOVO: Listener para o slider
+    if (gameValueSlider && currentSliderValueDisplay) {
+        gameValueSlider.addEventListener('input', () => {
+            currentSliderValueDisplay.textContent = gameValueSlider.value;
+            // console.log("Slider value:", gameValueSlider.value); // Para depuração
+        });
+    } else {
+        console.error('Game Value Slider or display element not found!');
+    }
+    // FIM NOVO
+
 
     if(aiButton) aiButton.disabled = true;
 
@@ -254,8 +271,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const tokenPosition = BigInt(currentWhiteTokenIndex);
         encodedState |= (tokenPosition << 58n);
 
+        const dificuldade=2+ (gameValueSlider.value-1)*5;
+
         try {
-            const aiMoveIndex = jogoModuleInstance._jogadaSite(encodedState, 50);
+            const aiMoveIndex = jogoModuleInstance._jogadaSite(encodedState, dificuldade);
             console.log(`AI decided to move to square index: ${aiMoveIndex}`);
 
             const squareElement = getSquareElementByIndex(aiMoveIndex);
