@@ -24,6 +24,13 @@ document.addEventListener('DOMContentLoaded', function() {
     let decodeInputElement;
     let newGameButtonElement;
     let movesTableElement; // Reference to the <table> element
+    let gameValueSlider;
+    let currentSliderValueDisplay;
+    let gameModeRadios; // Will hold the NodeList of radio buttons
+
+    // Game state variables captured at the start of a new game
+    let selectedGameMode = 'player1_vs_ai'; // Default value
+    let currentGameDifficulty = 1; // Default difficulty
 
     aiButton = document.getElementById('encode-button');
     messageOutput = document.getElementById('decode-message');
@@ -32,6 +39,21 @@ document.addEventListener('DOMContentLoaded', function() {
     decodeInputElement = document.getElementById('decode-input');
     newGameButtonElement = document.getElementById('new-game-button');
     movesTableElement = document.getElementById('moves-table');
+    gameValueSlider = document.getElementById('game-value-slider');
+    currentSliderValueDisplay = document.getElementById('current-slider-value');
+
+    // Get references to game mode radio buttons and set up initial state
+    gameModeRadios = document.querySelectorAll('input[name="game_mode"]');
+    gameModeRadios.forEach(radio => {
+        if (radio.checked) {
+            selectedGameMode = radio.value; // Set initial selected mode
+        }
+        radio.addEventListener('change', (event) => {
+            selectedGameMode = event.target.value;
+            console.log("Selected Game Mode:", selectedGameMode); // For debugging
+        });
+    });
+
 
     movesTableBody = document.getElementById('moves-table')?.getElementsByTagName('tbody')[0];
     if (!movesTableBody) {
@@ -40,10 +62,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (newGameButtonElement) {
         newGameButtonElement.addEventListener('click', () => {
+            // Retrieve difficulty value from slider AT THE TIME the button is clicked
+            const difficultyValue = gameValueSlider.value;
+            currentGameDifficulty = parseInt(difficultyValue, 10); // Store as a number
+
+            // selectedGameMode is already updated by the 'change' event listener on radio buttons
+
+            console.log("Starting New Game with:");
+            console.log("  Difficulty:", currentGameDifficulty); // Use the stored value
+            console.log("  Game Mode:", selectedGameMode);
+
+            // Now initGame can potentially use these values to set up the game logic
             initGame(); // This will start a new, active game
         });
     } else {
         console.error('New Game Button (id="new-game-button") not found in the DOM!');
+    }
+
+    // Listener for the slider - only updates the display, not the active game difficulty
+    if (gameValueSlider && currentSliderValueDisplay) {
+        gameValueSlider.addEventListener('input', () => {
+            currentSliderValueDisplay.textContent = gameValueSlider.value;
+            // console.log("Slider value:", gameValueSlider.value); // For debugging
+        });
+    } else {
+        console.error('Game Value Slider or display element not found!');
     }
 
     if(aiButton) aiButton.disabled = true;
@@ -72,9 +115,31 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!gameActive) { // Game is NOT active (ended, viewing history, or not started)
             if (aiButton) aiButton.disabled = true; // AI moves only during an active game
             if (movesTableElement) movesTableElement.classList.remove('table-interaction-disabled'); // Enable table interaction
+
+            // Enable game mode and difficulty controls
+            if (gameValueSlider) gameValueSlider.disabled = false;
+            if (gameModeRadios) {
+                gameModeRadios.forEach(radio => {
+                    radio.disabled = false;
+                });
+            }
         } else { // Game IS active
-            if (aiButton) aiButton.disabled = !jogoModuleInstance;
+            if (aiButton) {
+                if (selectedGameMode === 'two_players') {
+                    aiButton.disabled = true;
+                } else {
+                    aiButton.disabled = !jogoModuleInstance; // Enable if module loaded in AI modes
+                }
+            }
             if (movesTableElement) movesTableElement.classList.add('table-interaction-disabled'); // Disable table interaction
+
+            // Disable game mode and difficulty controls
+            if (gameValueSlider) gameValueSlider.disabled = true;
+            if (gameModeRadios) {
+                gameModeRadios.forEach(radio => {
+                    radio.disabled = true;
+                });
+            }
         }
     }
 
@@ -237,6 +302,22 @@ document.addEventListener('DOMContentLoaded', function() {
             setMessage("O jogo não está ativo. IA não pode jogar.", true);
             return null;
         }
+
+        // Check if it's currently the AI's turn based on the selected game mode
+        const currentPlayer = (moveCount % 2) + 1; // 1 or 2
+        let isAITurn = false;
+        if (selectedGameMode === 'player1_vs_ai' && currentPlayer === 2) {
+            isAITurn = true;
+        } else if (selectedGameMode === 'player2_vs_ai' && currentPlayer === 1) {
+            isAITurn = true;
+        }
+
+        if (!isAITurn) {
+            setMessage("Não é a vez da IA jogar neste modo ou turno.", true);
+            return null; // Not AI's turn
+        }
+
+
         let encodedState = 0n; // Encode current state to pass to AI
 
         for (let i = 0; i < totalSquares; i++) {
@@ -254,8 +335,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const tokenPosition = BigInt(currentWhiteTokenIndex);
         encodedState |= (tokenPosition << 58n);
 
+        // Use the difficulty stored when the new game was started
+        const dificuldade = 2 + (currentGameDifficulty - 1) * 5;
+        console.log("AI Difficulty used:", dificuldade); // Log the difficulty being used
+
         try {
-            const aiMoveIndex = jogoModuleInstance._jogadaSite(encodedState, 50);
+            const aiMoveIndex = jogoModuleInstance._jogadaSite(encodedState, dificuldade);
             console.log(`AI decided to move to square index: ${aiMoveIndex}`);
 
             const squareElement = getSquareElementByIndex(aiMoveIndex);
@@ -399,7 +484,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadedStateInfo += "Click 'Start New Game' to play a new game.";
         setMessage(loadedStateInfo, false); // Use general message area for info
         if(wasHistoricGameOver && gameEndMessageElement) {
-            // Can use gameEndMessageElement to emphasize if the loaded state was a game end
+            // Can use gameEndMessageElement to emphasize if the loaded state was a game conclusion
             // gameEndMessageElement.textContent = "The displayed historic state was a game conclusion.";
         }
 
@@ -503,6 +588,23 @@ document.addEventListener('DOMContentLoaded', function() {
             setGameEndMessage(`Encurralado! O jogador ${winner} ganha!`);
             return;
         }
+
+        // After a player move, check if it's now the AI's turn and trigger it
+        const nextPlayer = (moveCount % 2) + 1;
+        let shouldAIPplay = false;
+        if (selectedGameMode === 'player1_vs_ai' && nextPlayer === 2) {
+            shouldAIPplay = true;
+        } else if (selectedGameMode === 'player2_vs_ai' && nextPlayer === 1) {
+            shouldAIPplay = true;
+        }
+
+        if (shouldAIPplay && gameActive) { // Only trigger AI if game is still active
+            // Use a small timeout to allow the UI to update after the human move
+            setTimeout(() => {
+                encodeGameStateToBigIntAndPlayAI(); // Trigger the AI move
+            }, 50); // Adjust delay as needed
+        }
+
     }
 
     // --- Function to Initialize or Reset the Game ---
@@ -523,7 +625,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!calledDuringDecode) {
             // Full reset for a new game
             if (gameEndMessageElement) gameEndMessageElement.textContent = '';
-            setMessage("New game started. Player 1's turn.", false);
+            setMessage(`New game started. Mode: ${selectedGameMode}, Difficulty: ${currentGameDifficulty}. Player 1's turn.`, false); // Include mode/difficulty
             if (encodedOutputDiv) encodedOutputDiv.textContent = '';
             if (decodeInputElement) decodeInputElement.value = '';
 
@@ -584,6 +686,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log("New game active. White token at:", currentWhiteTokenIndex, "Move count:", moveCount);
             }
             updateControlsBasedOnGameState(); // Update controls for the new active/inactive game state
+
+            // If Player 2 vs AI mode is selected, trigger the AI's first move
+            if (selectedGameMode === 'player2_vs_ai' && gameActive) {
+                setMessage("New game started. Player 1 (IA)'s turn.", false);
+                // Use a small timeout to allow the board to render before AI moves
+                setTimeout(() => {
+                    encodeGameStateToBigIntAndPlayAI();
+                }, 100); // Adjust delay as needed
+            } else if (selectedGameMode === 'player1_vs_ai' && gameActive) {
+                setMessage("New game started. Player 1 (You)'s turn.", false);
+            } else if (selectedGameMode === 'two_players' && gameActive) {
+                setMessage("New game started. Player 1's turn.", false);
+            }
+
+
         }
         // If calledDuringDecode, gameActive is set by applyDecodedState, and controls updated there.
     }
@@ -591,21 +708,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Event Listeners Setup ---
     if (aiButton && encodedOutputDiv) {
         aiButton.addEventListener('click', () => {
-            if (!gameActive) {
-                if(encodedOutputDiv) encodedOutputDiv.textContent = "Jogo não está ativo para jogada da IA.";
-                return;
-            }
-            if (!jogoModuleInstance) {
-                if(encodedOutputDiv) encodedOutputDiv.textContent = "Módulo da IA não está pronto.";
-                return;
-            }
-
-            const stateAfterAIMove = encodeGameStateToBigIntAndPlayAI(); // This will call square.click()
-
-            if (stateAfterAIMove !== null && encodedOutputDiv) {
-                encodedOutputDiv.textContent = `Encoded (Dec) after AI: ${stateAfterAIMove.toString()}\n`;
-                encodedOutputDiv.textContent += `Encoded (Bin) after AI: ${stateAfterAIMove.toString(2).padStart(64, '0')}`;
-            }
+            // The AI button is now primarily a manual trigger, but its functionality
+            // should still respect game state and mode. The automatic triggering
+            // is handled in handleSquareClick and initGame.
+            encodeGameStateToBigIntAndPlayAI(); // This function now contains the mode/turn checks
         });
     } else {
         console.error("Could not find AI Move button or output div. AI functionality may be affected.");
@@ -636,6 +742,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // --- Start the game when the page loads ---
-    initGame(); // Starts a new, active game by default
+    initGame(true); // Starts a new, active game by default
 
 }); // End of DOMContentLoaded listener
