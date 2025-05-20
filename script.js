@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let gameActive; // true if a game is ongoing and board moves are allowed
     let moveCount;
 
-    let moveHistory = [];
+    // let moveHistory = []; // No longer strictly needed for table loading, cells store state
     let movesTableBody;
     let jogoModuleInstance = null;
 
@@ -42,18 +42,16 @@ document.addEventListener('DOMContentLoaded', function() {
     gameValueSlider = document.getElementById('game-value-slider');
     currentSliderValueDisplay = document.getElementById('current-slider-value');
 
-    // Get references to game mode radio buttons and set up initial state
     gameModeRadios = document.querySelectorAll('input[name="game_mode"]');
     gameModeRadios.forEach(radio => {
         if (radio.checked) {
-            selectedGameMode = radio.value; // Set initial selected mode
+            selectedGameMode = radio.value;
         }
         radio.addEventListener('change', (event) => {
             selectedGameMode = event.target.value;
-            console.log("Selected Game Mode:", selectedGameMode); // For debugging
+            console.log("Selected Game Mode:", selectedGameMode);
         });
     });
-
 
     movesTableBody = document.getElementById('moves-table')?.getElementsByTagName('tbody')[0];
     if (!movesTableBody) {
@@ -62,28 +60,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (newGameButtonElement) {
         newGameButtonElement.addEventListener('click', () => {
-            // Retrieve difficulty value from slider AT THE TIME the button is clicked
             const difficultyValue = gameValueSlider.value;
-            currentGameDifficulty = parseInt(difficultyValue, 10); // Store as a number
-
-            // selectedGameMode is already updated by the 'change' event listener on radio buttons
-
+            currentGameDifficulty = parseInt(difficultyValue, 10);
             console.log("Starting New Game with:");
-            console.log("  Difficulty:", currentGameDifficulty); // Use the stored value
+            console.log("  Difficulty:", currentGameDifficulty);
             console.log("  Game Mode:", selectedGameMode);
-
-            // Now initGame can potentially use these values to set up the game logic
-            initGame(); // This will start a new, active game
+            initGame();
         });
     } else {
         console.error('New Game Button (id="new-game-button") not found in the DOM!');
     }
 
-    // Listener for the slider - only updates the display, not the active game difficulty
     if (gameValueSlider && currentSliderValueDisplay) {
         gameValueSlider.addEventListener('input', () => {
             currentSliderValueDisplay.textContent = gameValueSlider.value;
-            // console.log("Slider value:", gameValueSlider.value); // For debugging
         });
     } else {
         console.error('Game Value Slider or display element not found!');
@@ -96,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(instance => {
                 jogoModuleInstance = instance;
                 console.log("Jogo Wasm Module Initialized!");
-                updateControlsBasedOnGameState(); // Update based on initial game state
+                updateControlsBasedOnGameState();
                 if(messageOutput) messageOutput.textContent = "Wasm module loaded.";
             })
             .catch(err => {
@@ -110,75 +100,54 @@ document.addEventListener('DOMContentLoaded', function() {
         updateControlsBasedOnGameState();
     }
 
-    // --- Helper Function: Update UI Controls Based on Game State ---
     function updateControlsBasedOnGameState() {
-        if (!gameActive) { // Game is NOT active (ended, viewing history, or not started)
-            if (aiButton) aiButton.disabled = true; // AI moves only during an active game
-            if (movesTableElement) movesTableElement.classList.remove('table-interaction-disabled'); // Enable table interaction
-
-            // Enable game mode and difficulty controls
+        if (!gameActive) {
+            if (aiButton) aiButton.disabled = true;
+            if (movesTableElement) movesTableElement.classList.remove('table-interaction-disabled');
             if (gameValueSlider) gameValueSlider.disabled = false;
             if (gameModeRadios) {
-                gameModeRadios.forEach(radio => {
-                    radio.disabled = false;
-                });
+                gameModeRadios.forEach(radio => { radio.disabled = false; });
             }
-        } else { // Game IS active
+        } else {
             if (aiButton) {
                 if (selectedGameMode === 'two_players') {
                     aiButton.disabled = true;
                 } else {
-                    aiButton.disabled = !jogoModuleInstance; // Enable if module loaded in AI modes
+                    aiButton.disabled = !jogoModuleInstance;
                 }
             }
-            if (movesTableElement) movesTableElement.classList.add('table-interaction-disabled'); // Disable table interaction
-
-            // Disable game mode and difficulty controls
+            if (movesTableElement) movesTableElement.classList.add('table-interaction-disabled');
             if (gameValueSlider) gameValueSlider.disabled = true;
             if (gameModeRadios) {
-                gameModeRadios.forEach(radio => {
-                    radio.disabled = true;
-                });
+                gameModeRadios.forEach(radio => { radio.disabled = true; });
             }
         }
     }
 
-    // --- Helper Function: Set Game End Message (for live games ending) ---
     function setGameEndMessage(message) {
         if (gameEndMessageElement) {
             gameEndMessageElement.textContent = message;
         }
-        // gameActive should have been set to false by the caller (checkWinCondition, handleSquareClick stalemate)
-        updateControlsBasedOnGameState(); // This will re-enable table interaction
+        updateControlsBasedOnGameState();
     }
 
-
-    // --- Helper Function: Get Square Element by Index ---
     function getSquareElementByIndex(index) {
-        if (index < 0 || index >= totalSquares) {
-            return null;
-        }
+        if (index < 0 || index >= totalSquares) return null;
         if (!gameBoardElement) {
             gameBoardElement = document.getElementById('game-board');
-            if (!gameBoardElement) {
-                console.error("getSquareElementByIndex: Game board element not found!");
-                return null;
-            }
+            if (!gameBoardElement) return null;
         }
         return gameBoardElement.querySelector(`.square[data-square-number="${index}"]`);
     }
 
-    // --- Helper: Add Number Circle to a Square ---
     function addNumberCircle(squareElement, number) {
         if (!squareElement) return;
-        // squareElement.innerHTML = ''; // Ensure it's clean before adding, handled by initGame(true) usually
         const numberCircle = document.createElement('div');
         numberCircle.classList.add('number-circle', `number-${number}`);
         numberCircle.textContent = number.toString();
         squareElement.appendChild(numberCircle);
     }
 
-    // --- Helper: Display General Status/Error Messages ---
     function setMessage(message, isError = false) {
         if (messageOutput) {
             messageOutput.textContent = message;
@@ -186,58 +155,43 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // --- Helper Function: Check if a Target Index is Adjacent to Current ---
     function isMoveAdjacent(targetIndex, currentIndex) {
         if (targetIndex < 0 || targetIndex >= totalSquares) return false;
         if (targetIndex === currentIndex) return false;
-
         const currentRow = Math.floor(currentIndex / boardSize);
         const currentCol = currentIndex % boardSize;
         const targetRow = Math.floor(targetIndex / boardSize);
         const targetCol = targetIndex % boardSize;
-
         const rowDiff = Math.abs(targetRow - currentRow);
         const colDiff = Math.abs(targetCol - currentCol);
-
         return rowDiff <= 1 && colDiff <= 1;
     }
 
-    // --- Helper Function: Check for Win Condition (Reaching Goal in an active game) ---
     function checkWinCondition(currentIndex) {
         let winner = null;
-        if (currentIndex === numberOneSquareIndex) {
-            winner = 1;
-        } else if (currentIndex === numberTwoSquareIndex) {
-            winner = 2;
-        }
-
+        if (currentIndex === numberOneSquareIndex) winner = 1;
+        else if (currentIndex === numberTwoSquareIndex) winner = 2;
         if (winner !== null) {
-            gameActive = false; // Mark game as ended
-            setGameEndMessage(`Jogador ${winner} ganhou!`); // Display win message
+            gameActive = false;
+            setGameEndMessage(`Jogador ${winner} ganhou!`);
             return true;
         }
         return false;
     }
 
-    // --- Helper Function: Check if any valid moves exist from current position ---
-    function canPlayerMove(currentIndex, context = "move") { // context can be 'move', 'init', 'load_check'
+    function canPlayerMove(currentIndex, context = "move") {
         let foundValidMove = false;
         if (context !== 'load_check') console.log(`canPlayerMove (context: ${context}) called for index ${currentIndex}`);
-
-
         for (let rowOffset = -1; rowOffset <= 1; rowOffset++) {
             for (let colOffset = -1; colOffset <= 1; colOffset++) {
                 if (rowOffset === 0 && colOffset === 0) continue;
-
                 const currentRow = Math.floor(currentIndex / boardSize);
                 const currentCol = currentIndex % boardSize;
                 const targetRow = currentRow + rowOffset;
                 const targetCol = currentCol + colOffset;
-
                 if (targetRow >= 0 && targetRow < boardSize && targetCol >= 0 && targetCol < boardSize) {
                     const targetIndex = targetRow * boardSize + targetCol;
                     const targetSquareElement = getSquareElementByIndex(targetIndex);
-                    // When checking for canPlayerMove, an occupied square means no move there.
                     if (targetSquareElement && !targetSquareElement.classList.contains('occupied')) {
                         if (context !== 'load_check') console.log(`  FOUND VALID MOVE at ${targetIndex}`);
                         foundValidMove = true;
@@ -253,25 +207,20 @@ document.addEventListener('DOMContentLoaded', function() {
         return foundValidMove;
     }
 
-    // --- Helper Function: Update Goal Highlight ---
     function updateGoalHighlight() {
         const goalSquare1 = getSquareElementByIndex(numberOneSquareIndex);
         const goalSquare2 = getSquareElementByIndex(numberTwoSquareIndex);
         const numberCircle1 = goalSquare1 ? goalSquare1.querySelector('.number-circle') : null;
         const numberCircle2 = goalSquare2 ? goalSquare2.querySelector('.number-circle') : null;
-
         if (numberCircle1) numberCircle1.classList.remove('highlighted-goal');
         if (numberCircle2) numberCircle2.classList.remove('highlighted-goal');
-
-        // Always highlight based on moveCount to show whose turn it was/is
-        if (moveCount % 2 === 0) { // Player 1's turn (or would be)
+        if (moveCount % 2 === 0) {
             if (numberCircle1) numberCircle1.classList.add('highlighted-goal');
-        } else { // Player 2's turn (or would be)
+        } else {
             if (numberCircle2) numberCircle2.classList.add('highlighted-goal');
         }
     }
 
-    // --- Encoding Function (JUST for current state, NO AI MOVE) ---
     function encodeCurrentStateOnly() {
         let encodedState = 0n;
         for (let i = 0; i < totalSquares; i++) {
@@ -280,119 +229,85 @@ document.addEventListener('DOMContentLoaded', function() {
                 encodedState |= (1n << BigInt(i));
             }
         }
-        const height = 7n;
-        encodedState |= (height << 50n);
-        const width = 7n;
-        encodedState |= (width << 53n);
-        const currentPlayerBit = BigInt(moveCount % 2); // Player whose turn it IS NOW
+        const height = 7n; encodedState |= (height << 50n);
+        const width = 7n; encodedState |= (width << 53n);
+        const currentPlayerBit = BigInt(moveCount % 2);
         encodedState |= (currentPlayerBit << 56n);
         const tokenPosition = BigInt(currentWhiteTokenIndex);
         encodedState |= (tokenPosition << 58n);
         return encodedState;
     }
 
-
-    // --- Encoding Function (includes AI move) ---
     function encodeGameStateToBigIntAndPlayAI() {
         if (!jogoModuleInstance) {
             setMessage("Módulo do jogo não carregado. Jogada da IA não disponível.", true);
             return null;
         }
-        if (!gameActive) { // AI should only play if game is active
+        if (!gameActive) {
             setMessage("O jogo não está ativo. IA não pode jogar.", true);
             return null;
         }
-
-        // Check if it's currently the AI's turn based on the selected game mode
-        const currentPlayer = (moveCount % 2) + 1; // 1 or 2
+        const currentPlayer = (moveCount % 2) + 1;
         let isAITurn = false;
-        if (selectedGameMode === 'player1_vs_ai' && currentPlayer === 2) {
-            isAITurn = true;
-        } else if (selectedGameMode === 'player2_vs_ai' && currentPlayer === 1) {
-            isAITurn = true;
-        }
-
+        if (selectedGameMode === 'player1_vs_ai' && currentPlayer === 2) isAITurn = true;
+        else if (selectedGameMode === 'player2_vs_ai' && currentPlayer === 1) isAITurn = true;
         if (!isAITurn) {
             setMessage("Não é a vez da IA jogar neste modo ou turno.", true);
-            return null; // Not AI's turn
+            return null;
         }
-
-
-        let encodedState = 0n; // Encode current state to pass to AI
-
+        let encodedState = 0n;
         for (let i = 0; i < totalSquares; i++) {
             const square = getSquareElementByIndex(i);
             if (square && square.classList.contains('occupied')) {
                 encodedState |= (1n << BigInt(i));
             }
         }
-        const height = 7n;
-        encodedState |= (height << 50n);
-        const width = 7n;
-        encodedState |= (width << 53n);
+        const height = 7n; encodedState |= (height << 50n);
+        const width = 7n; encodedState |= (width << 53n);
         const currentPlayerBit = BigInt(moveCount % 2);
         encodedState |= (currentPlayerBit << 56n);
         const tokenPosition = BigInt(currentWhiteTokenIndex);
         encodedState |= (tokenPosition << 58n);
-
-        // Use the difficulty stored when the new game was started
         const dificuldade = 2 + (currentGameDifficulty - 1) * 5;
-        console.log("AI Difficulty used:", dificuldade); // Log the difficulty being used
-
+        console.log("AI Difficulty used:", dificuldade);
         try {
             const aiMoveIndex = jogoModuleInstance._jogadaSite(encodedState, dificuldade);
             console.log(`AI decided to move to square index: ${aiMoveIndex}`);
-
             const squareElement = getSquareElementByIndex(aiMoveIndex);
-            // AI move must also be valid
             if (squareElement && isMoveAdjacent(aiMoveIndex, currentWhiteTokenIndex) && !squareElement.classList.contains('occupied')) {
-                squareElement.click(); // This will trigger handleSquareClick for the AI's move
+                squareElement.click();
             } else {
                 console.error("AI attempted an invalid move to index:", aiMoveIndex);
                 setMessage("IA tentou uma jogada inválida.", true);
-                // Game continues with human player if AI fails, or could be AI's loss if strict.
             }
-            return encodeCurrentStateOnly(); // Return state AFTER AI's potential move
+            return encodeCurrentStateOnly();
         } catch (e) {
             console.error("Error during AI move execution:", e);
             setMessage("Erro ao executar a jogada da IA.", true);
-            return encodedState; // Return state before AI attempt
+            return encodedState;
         }
     }
 
-    // --- Decoding Function (Extracts data from BigInt) ---
     function decodeBigIntToGameState(encodedString) {
         try {
             const encodedState = BigInt(encodedString.trim());
-            const tokenIndex = Number((encodedState >> 58n) & 63n);    // bits 58-63
-            const playerBit = Number((encodedState >> 56n) & 1n);     // bit 56 (0 for P1, 1 for P2)
-            const width = Number((encodedState >> 53n) & 7n);       // bits 53-55
-            const height = Number((encodedState >> 50n) & 7n);      // bits 50-52
-            // bits 0-48 for board occupation
-
-            if (width !== boardSize || height !== boardSize) { // Use configured boardSize
+            const tokenIndex = Number((encodedState >> 58n) & 63n);
+            const playerBit = Number((encodedState >> 56n) & 1n);
+            const width = Number((encodedState >> 53n) & 7n);
+            const height = Number((encodedState >> 50n) & 7n);
+            if (width !== boardSize || height !== boardSize) {
                 console.warn(`Decoded dimensions are ${width}x${height}, expected ${boardSize}x${boardSize}.`);
-                // Potentially handle this as an error or adapt if dynamic board sizes were intended
             }
             if (tokenIndex < 0 || tokenIndex >= totalSquares) {
                 console.error(`Decoded token index ${tokenIndex} is out of bounds.`);
                 setMessage(`Error: Decoded token index ${tokenIndex} is out of bounds.`, true);
                 return null;
             }
-
-            const boardState = []; // Array of booleans (true if occupied by black token)
+            const boardState = [];
             for (let i = 0; i < totalSquares; i++) {
-                const bitIsSet = ((encodedState >> BigInt(i)) & 1n) === 1n;
-                boardState.push(bitIsSet);
+                boardState.push(((encodedState >> BigInt(i)) & 1n) === 1n);
             }
-            // playerBit is whose turn it is (0 for P1, 1 for P2). This matches moveCount % 2.
-            // So, moveCountParity should be this playerBit.
-            return {
-                tokenIndex: tokenIndex,
-                moveCountParity: playerBit,
-                boardState: boardState
-            };
-
+            return { tokenIndex, moveCountParity: playerBit, boardState };
         } catch (error) {
             console.error("Error decoding BigInt string:", error);
             setMessage(`Error decoding input: ${error.message}`, true);
@@ -400,41 +315,30 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // --- Function to Apply Decoded State to Board (for viewing) ---
     function applyDecodedState(state, source = 'unknown') {
         if (!state) {
             setMessage("Failed to decode or apply state.", true);
             return;
         }
         console.log("Applying decoded state for viewing from:", source, state);
-        if (gameEndMessageElement) gameEndMessageElement.textContent = ''; // Clear previous live game end messages
+        if (gameEndMessageElement) gameEndMessageElement.textContent = '';
 
-        if (source === 'input') { // If loading from text input, clear the current visual history
-            moveHistory = [];
-            if (movesTableBody) {
-                movesTableBody.innerHTML = '';
-            }
+        if (source === 'input') {
+            // moveHistory = []; // Phased out
+            if (movesTableBody) movesTableBody.innerHTML = '';
         }
 
-        initGame(true); // Clears board, sets up squares, but doesn't reset full game logic
-
+        initGame(true);
         currentWhiteTokenIndex = state.tokenIndex;
-        moveCount = state.moveCountParity; // This sets whose turn it *would have been*
+        moveCount = state.moveCountParity;
 
-        // Place tokens on board
         for (let i = 0; i < totalSquares; i++) {
             const squareElement = getSquareElementByIndex(i);
-            if (squareElement) squareElement.innerHTML = ''; // Clear square first
-
+            if (squareElement) squareElement.innerHTML = '';
             if (i === numberOneSquareIndex) addNumberCircle(squareElement, 1);
             else if (i === numberTwoSquareIndex) addNumberCircle(squareElement, 2);
-
-            if (state.boardState[i]) { // Occupied by black token in the loaded state
-                // Ensure black token isn't placed on the white token's current square or on goal squares
-                // (unless the goal itself is supposed to be black, which is not standard for this game)
-                if (i === currentWhiteTokenIndex) continue; // White token takes precedence
-                // If a goal square is in boardState, it's unusual, usually goals are for white to reach
-                // or are empty until white reaches them.
+            if (state.boardState[i]) {
+                if (i === currentWhiteTokenIndex) continue;
                 if (squareElement && !(i === numberOneSquareIndex || i === numberTwoSquareIndex)) {
                     const blackToken = document.createElement('div');
                     blackToken.classList.add('token');
@@ -445,54 +349,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
-        // Place the white token
         const whiteTokenSquare = getSquareElementByIndex(currentWhiteTokenIndex);
         if (whiteTokenSquare) {
-            // If white token is on a goal square, ensure the number circle is cleared first
             if (whiteTokenSquare.querySelector('.number-circle')) whiteTokenSquare.innerHTML = '';
             const whiteToken = document.createElement('div');
             whiteToken.classList.add('white-token');
             whiteTokenSquare.appendChild(whiteToken);
-            whiteTokenSquare.classList.remove('occupied'); // White token square is not 'occupied' by black
+            whiteTokenSquare.classList.remove('occupied');
         } else {
             console.error("CRITICAL: Failed to find square for decoded white token index:", currentWhiteTokenIndex);
             setMessage("Error placing white token from decoded state.", true);
-            // gameActive will be false, controls updated.
         }
-
-        updateGoalHighlight(); // Highlight based on the loaded state's moveCount (whose turn it was)
-
-        gameActive = false; // KEY: Viewing a loaded state is not an "active" game.
-                            // Board moves are disabled. Table interaction remains enabled.
-
-        // Display information about the loaded state
+        updateGoalHighlight();
+        gameActive = false;
         let loadedStateInfo = `Displaying state: Turn for Player ${state.moveCountParity + 1}. `;
-        let wasHistoricGameOver = false;
-
-        if (state.tokenIndex === numberOneSquareIndex) {
-            loadedStateInfo += "This was a winning state for Player 1. ";
-            wasHistoricGameOver = true;
-        } else if (state.tokenIndex === numberTwoSquareIndex) {
-            loadedStateInfo += "This was a winning state for Player 2. ";
-            wasHistoricGameOver = true;
-        } else if (!canPlayerMove(state.tokenIndex, 'load_check')) {
-            const blockedPlayer = state.moveCountParity + 1; // Player whose turn it was in that state
-            loadedStateInfo += `Player ${blockedPlayer} had no available moves in this state. `;
-            wasHistoricGameOver = true;
+        if (state.tokenIndex === numberOneSquareIndex) loadedStateInfo += "This was a winning state for Player 1. ";
+        else if (state.tokenIndex === numberTwoSquareIndex) loadedStateInfo += "This was a winning state for Player 2. ";
+        else if (!canPlayerMove(state.tokenIndex, 'load_check')) {
+            loadedStateInfo += `Player ${state.moveCountParity + 1} had no available moves in this state. `;
         }
-
         loadedStateInfo += "Click 'Start New Game' to play a new game.";
-        setMessage(loadedStateInfo, false); // Use general message area for info
-        if(wasHistoricGameOver && gameEndMessageElement) {
-            // Can use gameEndMessageElement to emphasize if the loaded state was a game conclusion
-            // gameEndMessageElement.textContent = "The displayed historic state was a game conclusion.";
-        }
-
-
-        updateControlsBasedOnGameState(); // gameActive is false, so table will be enabled.
+        setMessage(loadedStateInfo, false);
+        updateControlsBasedOnGameState();
     }
 
-    // --- Helper Function: Convert Index to Algebraic Coordinates ---
     function indexToCoords(index) {
         if (index < 0 || index >= totalSquares) return "N/A";
         const row = boardSize - 1 - Math.floor(index / boardSize);
@@ -501,226 +381,207 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${colChar}${row + 1}`;
     }
 
-    // --- Helper Function: Add Move to Table and History ---
-    function addMoveToTable(moveNumber, player, coords, encodedState) {
+    // --- NEW: Click handler for historic move cells ---
+    function handleHistoricMoveCellClick() {
+        if (gameActive) {
+            console.log("Game is active. Finish or reset the current game to load from history.");
+            setMessage("Finish or reset to load from history.", true);
+            return;
+        }
+        const stateToLoad = this.dataset.encodedState; // 'this' is the cell
+        if (stateToLoad) {
+            setMessage("Loading state from history for viewing...", false);
+            const decodedState = decodeBigIntToGameState(stateToLoad);
+            // Use a source like 'table-cell' to differentiate from 'input' if needed in applyDecodedState
+            applyDecodedState(decodedState, 'table-cell');
+        } else {
+            console.warn("Clicked cell in history table has no encoded state.");
+            setMessage("No state found for this historic move.", true);
+        }
+    }
+
+    // --- UPDATED: Add Move to Table (New Structure) ---
+    function addMoveToTable(gameMoveNumber, player, coords, encodedState) { // gameMoveNumber is ply (1, 2, 3...)
         if (!movesTableBody) {
             console.error("addMoveToTable: Moves table body not found! Cannot add move.");
             return;
         }
 
-        const newRow = movesTableBody.insertRow();
-        newRow.insertCell(0).textContent = moveNumber;
-        newRow.insertCell(1).textContent = player;
-        newRow.insertCell(2).textContent = coords;
-        // No 4th cell for encoded state display
+        const tableRowNumber = Math.floor((gameMoveNumber - 1) / 2) + 1; // 1-based full move number
+        let targetRow;
+        let moveCell;
 
-        newRow.dataset.encodedState = encodedState.toString(); // Keep for row click functionality
+        if (player === 1) { // Player 1's move
+            targetRow = movesTableBody.insertRow(); // New row for P1's move (and subsequent P2's move)
+            targetRow.insertCell(0).textContent = tableRowNumber;
 
-        newRow.addEventListener('click', function() {
-            if (gameActive) { // Prevent loading from history if a game is live
-                console.log("Game is active. Finish or reset the current game to load from history.");
-                setMessage("Finish or reset to load from history.", true);
+            moveCell = targetRow.insertCell(1); // Cell for Player 1's move
+            targetRow.insertCell(2).textContent = ''; // Empty cell for Player 2 initially
+        } else { // Player 2's move
+            // Find the last row, which should correspond to the current tableRowNumber
+            if (movesTableBody.rows.length > 0 &&
+                movesTableBody.rows[movesTableBody.rows.length - 1].cells[0] &&
+                movesTableBody.rows[movesTableBody.rows.length - 1].cells[0].textContent == tableRowNumber.toString()) {
+                targetRow = movesTableBody.rows[movesTableBody.rows.length - 1];
+            } else {
+                // This case might occur if loading a game state where P2 made the last move of a pair,
+                // and the table is being reconstructed. Or an unexpected sequence.
+                // For robustness, create the row if it doesn't exist, though ideally P1 creates it.
+                console.warn(`Player 2's move for table row ${tableRowNumber}, but P1's part of row not found/mismatched. Creating/adjusting row.`);
+                targetRow = movesTableBody.insertRow();
+                targetRow.insertCell(0).textContent = tableRowNumber;
+                targetRow.insertCell(1).textContent = ''; // Empty for P1
+            }
+
+            if (targetRow) {
+                // Ensure cell exists, handles case where row was just created for P2.
+                moveCell = targetRow.cells[2] || targetRow.insertCell(2);
+            } else {
+                console.error(`addMoveToTable: Could not find or create row for Player 2's move (Table Row: ${tableRowNumber}).`);
                 return;
             }
+        }
 
-            const stateToLoad = this.dataset.encodedState;
-            if (stateToLoad) {
-                setMessage("Loading state from history for viewing...", false);
-                const decodedState = decodeBigIntToGameState(stateToLoad);
-                applyDecodedState(decodedState, 'table');
-            }
-        });
-        moveHistory.push({ moveNumber, player, coords, encodedState });
+        if (moveCell) {
+            moveCell.textContent = coords;
+            moveCell.dataset.encodedState = encodedState.toString();
+            moveCell.addEventListener('click', handleHistoricMoveCellClick);
+        } else {
+            console.error(`addMoveToTable: Failed to get move cell for player ${player}, move ${coords}`);
+        }
+        // moveHistory.push({ gameMoveNumber, player, coords, encodedState }); // Old history push, can be removed or adapted
     }
 
 
-    // --- Function to Handle Clicks on Squares (only if gameActive) ---
     function handleSquareClick(event) {
-        if (!gameActive) return; // Board clicks only processed if game is live
-
+        if (!gameActive) return;
         const clickedSquare = event.currentTarget;
         const clickedSquareIndex = parseInt(clickedSquare.dataset.squareNumber, 10);
-
         if (!isMoveAdjacent(clickedSquareIndex, currentWhiteTokenIndex)) return;
         if (clickedSquare.classList.contains('occupied')) return;
 
-        // Player making the move (1 or 2)
         const playerMakingTheMove = (moveCount % 2) + 1;
-        const gameMoveNumber = moveCount + 1; // Overall move number in the game
-        const moveCoords = indexToCoords(clickedSquareIndex);
+        const gameMoveNumberForTable = moveCount + 1; // This is the ply number
 
-        // Update previous square to black token
         const previousSquareElement = getSquareElementByIndex(currentWhiteTokenIndex);
         if (previousSquareElement) {
-            previousSquareElement.innerHTML = ''; // Clear previous content (e.g. white token or number)
+            previousSquareElement.innerHTML = '';
             const blackToken = document.createElement('div');
             blackToken.classList.add('token');
             previousSquareElement.appendChild(blackToken);
             previousSquareElement.classList.add('occupied');
         }
-
-        // Move white token to new square
-        clickedSquare.innerHTML = ''; // Clear new square (e.g. number if it's a goal)
+        clickedSquare.innerHTML = '';
         const whiteToken = document.createElement('div');
         whiteToken.classList.add('white-token');
         clickedSquare.appendChild(whiteToken);
-        clickedSquare.classList.remove('occupied'); // Current square is not 'occupied' by black
-
+        clickedSquare.classList.remove('occupied');
         currentWhiteTokenIndex = clickedSquareIndex;
-        moveCount++; // Increment move count AFTER determining player and processing move
+        moveCount++;
 
-        const encodedStateForTable = encodeCurrentStateOnly(); // Encode state AFTER this move
-        addMoveToTable(gameMoveNumber, playerMakingTheMove, moveCoords, encodedStateForTable);
-        updateGoalHighlight(); // Update for the next player's turn
+        const encodedStateForTable = encodeCurrentStateOnly(); // State *after* this move
+        const moveCoords = indexToCoords(clickedSquareIndex);
+        addMoveToTable(gameMoveNumberForTable, playerMakingTheMove, moveCoords, encodedStateForTable);
 
-        if (checkWinCondition(currentWhiteTokenIndex)) {
-            // checkWinCondition sets gameActive = false and calls setGameEndMessage
-            return;
-        }
-
+        updateGoalHighlight();
+        if (checkWinCondition(currentWhiteTokenIndex)) return;
         if (!canPlayerMove(currentWhiteTokenIndex)) {
-            gameActive = false; // Mark game as ended (stalemate)
-            // The player whose turn it now IS (after moveCount incremented) cannot move.
-            // So the player who just moved (playerMakingTheMove) wins.
-            // Or, if player X moves and player Y has no moves, player X wins.
-            // Current moveCount is for player Y. If Y cannot move, player X (playerMakingTheMove) wins.
-            const winner = playerMakingTheMove;
+            gameActive = false;
+            const winner = playerMakingTheMove; // Player who made the move that resulted in no moves for opponent
             setGameEndMessage(`Encurralado! O jogador ${winner} ganha!`);
             return;
         }
-
-        // After a player move, check if it's now the AI's turn and trigger it
         const nextPlayer = (moveCount % 2) + 1;
         let shouldAIPplay = false;
-        if (selectedGameMode === 'player1_vs_ai' && nextPlayer === 2) {
-            shouldAIPplay = true;
-        } else if (selectedGameMode === 'player2_vs_ai' && nextPlayer === 1) {
-            shouldAIPplay = true;
+        if (selectedGameMode === 'player1_vs_ai' && nextPlayer === 2) shouldAIPplay = true;
+        else if (selectedGameMode === 'player2_vs_ai' && nextPlayer === 1) shouldAIPplay = true;
+        if (shouldAIPplay && gameActive) {
+            setTimeout(() => { encodeGameStateToBigIntAndPlayAI(); }, 50);
         }
-
-        if (shouldAIPplay && gameActive) { // Only trigger AI if game is still active
-            // Use a small timeout to allow the UI to update after the human move
-            setTimeout(() => {
-                encodeGameStateToBigIntAndPlayAI(); // Trigger the AI move
-            }, 50); // Adjust delay as needed
-        }
-
     }
 
-    // --- Function to Initialize or Reset the Game ---
-    function initGame(calledDuringDecode = false) { // calledDuringDecode = true just sets up board, no game logic reset
-        if (!calledDuringDecode) {
-            console.log("Initializing new game (user action or first load)...");
-        } else {
-            console.log("Initializing board for state display (decode/history)...");
-        }
+    function initGame(calledDuringDecode = false) {
+        if (!calledDuringDecode) console.log("Initializing new game...");
+        else console.log("Initializing board for state display...");
 
         gameBoardElement = document.getElementById('game-board');
         if (!gameBoardElement) {
-            console.error("CRITICAL: Game board element (id='game-board') not found! Cannot initialize.");
+            console.error("CRITICAL: Game board element not found!");
             if(messageOutput) messageOutput.textContent = "Error: Game board element not found.";
             return;
         }
 
         if (!calledDuringDecode) {
-            // Full reset for a new game
             if (gameEndMessageElement) gameEndMessageElement.textContent = '';
-            setMessage(`New game started. Mode: ${selectedGameMode}, Difficulty: ${currentGameDifficulty}. Player 1's turn.`, false); // Include mode/difficulty
+            setMessage(`New game started. Mode: ${selectedGameMode}, Difficulty: ${currentGameDifficulty}. Player 1's turn.`, false);
             if (encodedOutputDiv) encodedOutputDiv.textContent = '';
             if (decodeInputElement) decodeInputElement.value = '';
-
-            moveHistory = [];
-            if (movesTableBody) {
-                movesTableBody.innerHTML = '';
-            }
+            // moveHistory = []; // Phased out for this change
+            if (movesTableBody) movesTableBody.innerHTML = '';
         }
 
-        gameBoardElement.innerHTML = ''; // Clear board for all init cases
-
+        gameBoardElement.innerHTML = '';
         for (let i = 0; i < totalSquares; i++) {
             const square = document.createElement('div');
             square.classList.add('square');
             square.dataset.squareNumber = i;
-            // square.innerHTML = ''; // Already done by gameBoardElement.innerHTML
-            square.classList.remove('occupied'); // Ensure all squares are not marked occupied initially
-
+            square.classList.remove('occupied');
             if (i === numberOneSquareIndex) addNumberCircle(square, 1);
             else if (i === numberTwoSquareIndex) addNumberCircle(square, 2);
-
-            if (!calledDuringDecode) { // Only add click listeners for a new, active game
+            if (!calledDuringDecode) {
                 square.addEventListener('click', handleSquareClick);
-            } else { // If just decoding, don't make squares clickable yet
-                // square.style.cursor = 'default'; // Or similar visual cue if needed
             }
             gameBoardElement.appendChild(square);
         }
 
         if (!calledDuringDecode) {
-            // Setup for a new, active game
             moveCount = 0;
             currentWhiteTokenIndex = initialWhiteTokenIndex;
-            gameActive = true; // This is now an active game
-
+            gameActive = true;
             const startSquare = getSquareElementByIndex(initialWhiteTokenIndex);
             if(startSquare){
-                if (startSquare.querySelector('.number-circle')) startSquare.innerHTML = ''; // Clear number if starting on a goal
+                if (startSquare.querySelector('.number-circle')) startSquare.innerHTML = '';
                 const whiteToken = document.createElement('div');
                 whiteToken.classList.add('white-token');
                 startSquare.appendChild(whiteToken);
                 startSquare.classList.remove('occupied');
             } else {
                 console.error("CRITICAL: Could not find initial start square", initialWhiteTokenIndex);
-                gameActive = false; // Cannot start game
+                gameActive = false;
                 setGameEndMessage("Error: Could not place initial token.");
-                // updateControlsBasedOnGameState() is called by setGameEndMessage
                 return;
             }
-
-            updateGoalHighlight(); // For Player 1
-
+            updateGoalHighlight();
             if (!canPlayerMove(currentWhiteTokenIndex, 'init')) {
-                gameActive = false; // Game cannot start if no initial moves
-                // Player 1 is to move, cannot, so Player 2 wins by default (or game is just stuck).
+                gameActive = false;
                 setGameEndMessage(`No initial moves available! Player 2 wins by default!`);
             } else {
                 console.log("New game active. White token at:", currentWhiteTokenIndex, "Move count:", moveCount);
             }
-            updateControlsBasedOnGameState(); // Update controls for the new active/inactive game state
-
-            // If Player 2 vs AI mode is selected, trigger the AI's first move
+            updateControlsBasedOnGameState();
             if (selectedGameMode === 'player2_vs_ai' && gameActive) {
                 setMessage("New game started. Player 1 (IA)'s turn.", false);
-                // Use a small timeout to allow the board to render before AI moves
-                setTimeout(() => {
-                    encodeGameStateToBigIntAndPlayAI();
-                }, 100); // Adjust delay as needed
+                setTimeout(() => { encodeGameStateToBigIntAndPlayAI(); }, 100);
             } else if (selectedGameMode === 'player1_vs_ai' && gameActive) {
                 setMessage("New game started. Player 1 (You)'s turn.", false);
             } else if (selectedGameMode === 'two_players' && gameActive) {
                 setMessage("New game started. Player 1's turn.", false);
             }
-
-
         }
-        // If calledDuringDecode, gameActive is set by applyDecodedState, and controls updated there.
     }
 
-    // --- Event Listeners Setup ---
     if (aiButton && encodedOutputDiv) {
         aiButton.addEventListener('click', () => {
-            // The AI button is now primarily a manual trigger, but its functionality
-            // should still respect game state and mode. The automatic triggering
-            // is handled in handleSquareClick and initGame.
-            encodeGameStateToBigIntAndPlayAI(); // This function now contains the mode/turn checks
+            encodeGameStateToBigIntAndPlayAI();
         });
     } else {
-        console.error("Could not find AI Move button or output div. AI functionality may be affected.");
+        // console.error("Could not find AI Move button or output div."); // Already present
     }
 
     const decodeButton = document.getElementById('decode-button');
     if (decodeButton && decodeInputElement) {
         decodeButton.addEventListener('click', () => {
-            if (gameActive) { // Prevent loading if a live game is ongoing
+            if (gameActive) {
                 setMessage("Please finish or reset the current game before loading a new state for viewing.", true);
                 return;
             }
@@ -732,16 +593,28 @@ document.addEventListener('DOMContentLoaded', function() {
             setMessage("Decoding state for viewing...", false);
             const decodedState = decodeBigIntToGameState(encodedString);
             if (decodedState) {
-                applyDecodedState(decodedState, 'input');
+                applyDecodedState(decodedState, 'input'); // 'input' source will clear the table
             } else {
                 setMessage("Failed to decode the provided state.", true);
             }
         });
     } else {
-        console.error("Could not find Decode button or input field. Decode functionality may be affected.");
+        // console.error("Could not find Decode button or input field."); // Already present
     }
 
-    // --- Start the game when the page loads ---
-    initGame(true); // Starts a new, active game by default
+    initGame(true); // Initial setup for board view, then can be overridden by new game button
+    // To start a playable game on load instead of just board view:
+    // initGame(); // This would start an active game as per default settings.
+    // However, the current setup with "New Game" button seems more intentional.
+    // The initial initGame(true) sets up the board elements for viewing.
+    // A 'New Game' click then starts an actual game.
+    // If you want a game to be immediately playable on load, change initGame(true) to initGame()
+    // For now, let's stick to the existing behavior where "New Game" button is the main trigger for a playable game.
+    // The initial `initGame(true)` sets up the board. Then, if a user presses "New Game", `initGame()` is called.
+    // To make it clear no game is active on first load:
+    gameActive = false;
+    updateControlsBasedOnGameState();
+    setMessage("Click 'Iniciar Novo Jogo' to begin.", false);
+
 
 }); // End of DOMContentLoaded listener
