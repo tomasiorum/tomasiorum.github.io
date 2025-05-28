@@ -4,70 +4,79 @@ body {
     flex-direction: column;
     align-items: center;
     padding-top: 20px;
+    background-color: #f0f0f0; /* Added a light background for the page */
+    color: #333;
 }
 
-/* NEW: Container for the board and labels */
+h1 {
+    color: #333;
+}
+
+#main-container {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+
 #board-area {
     display: grid;
-    /* Define grid: Row labels col | Game board col */
-    /* Game board row | Col labels row   */
-    grid-template-columns: 30px auto; /* Width for row labels, rest for board */
-    grid-template-rows: auto 30px;    /* Height for board, height for col labels */
-    width: fit-content; /* Adjust width to content */
-    margin: 20px auto; /* Center the area */
-    gap: 5px; /* Optional gap between labels and board */
+    grid-template-columns: 30px auto; /* Largura para rótulos de linha, resto para o tabuleiro */
+    grid-template-rows: auto 30px;    /* Altura para o tabuleiro, altura para rótulos de coluna */
+    width: fit-content;
+    margin: 0 auto; /* Centraliza a área do tabuleiro se não estiver no flex container principal */
+    gap: 5px;
+    padding: 10px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
-/* Positioning the elements within the grid */
 #row-labels {
     grid-column: 1 / 2;
     grid-row: 1 / 2;
-    /* Style the labels */
     display: flex;
-    flex-direction: column; /* Stack numbers vertically */
-    justify-content: space-around; /* Distribute space evenly */
-    align-items: center; /* Center numbers horizontally */
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
     font-weight: bold;
     color: #555;
+    padding-right: 5px; /* Space between labels and board lines */
 }
 
 #game-board {
     grid-column: 2 / 3;
     grid-row: 1 / 2;
-    /* Keep existing game board styles */
-    width: 350px;
+    width: 350px; /* Fixed size, cells will adjust */
     height: 350px;
     border: 2px solid black;
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    grid-template-rows: repeat(7, 1fr);
-    /* margin-bottom: 0; Remove margin if previously set */
+    display: grid; /* grid-template-columns/rows will be set by JS */
+    background-color: #eee; /* Background for the grid area itself */
 }
 
-.corner-spacer { /* Styles the empty bottom-left cell */
+.corner-spacer {
     grid-column: 1 / 2;
     grid-row: 2 / 3;
-    /* background-color: #f0f0f0; /* Optional: for debugging */
 }
 
 #col-labels {
     grid-column: 2 / 3;
     grid-row: 2 / 3;
-    /* Style the labels */
     display: flex;
-    flex-direction: row; /* Align letters horizontally */
-    justify-content: space-around; /* Distribute space evenly */
-    align-items: center; /* Center letters vertically */
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
     font-weight: bold;
     color: #555;
+    padding-top: 5px; /* Space between labels and board lines */
 }
-
-
-/* --- Existing styles for squares, tokens, etc. remain below --- */
 
 .square {
     border: 1px solid #ccc;
-    background-color: #eee;
+    background-color: #f8f8f8; /* Slightly lighter than board bg for contrast */
     cursor: pointer;
     display: flex;
     justify-content: center;
@@ -79,22 +88,20 @@ body {
 }
 
 .square:hover {
-    background-color: #ddd;
+    background-color: #e0e0e0;
 }
 
-/* Style for the black token */
-.token {
-    width: 80%;
-    height: 80%;
+.token { /* Black token (trail) */
+    width: 75%; /* Adjusted for potentially smaller cells */
+    height: 75%;
     background-color: black;
     border-radius: 50%;
     box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
 }
 
-/* Style for the active white token */
-.white-token {
-    width: 80%;
-    height: 80%;
+.white-token { /* Current player token */
+    width: 75%;
+    height: 75%;
     background-color: white;
     border: 2px solid black;
     border-radius: 50%;
@@ -102,8 +109,7 @@ body {
     box-sizing: border-box;
 }
 
-/* Common style for the numbered circles */
-.number-circle {
+.number-circle { /* Goal squares */
     width: 70%;
     height: 70%;
     border: 2px solid black;
@@ -112,67 +118,55 @@ body {
     justify-content: center;
     align-items: center;
     font-weight: bold;
-    font-size: 18px;
+    font-size: clamp(12px, 3vw, 18px); /* Responsive font size */
     color: black;
     background-color: white;
     box-sizing: border-box;
     transition: background-color 0.3s ease;
 }
 
-/* Style for the highlighted goal circle */
 .number-circle.highlighted-goal {
     background-color: lightgreen;
     color: black;
 }
 
-/* Class added to squares occupied by a black token */
 .square.occupied {
     cursor: not-allowed;
+    /* background-color: #ddd; /* Optional: distinct color for occupied squares */
 }
 
 .square.occupied:hover {
-    background-color: #eee; /* Override hover effect if occupied */
-}
-
-#main-container {
-    display: flex; /* Organiza o tabuleiro e a tabela lado a lado */
-    flex-direction: row; /* Direção horizontal */
-    align-items: flex-start; /* Alinha os itens no topo */
-    gap: 20px; /* Espaço entre o tabuleiro e a tabela */
-    justify-content: center; /* Centraliza o conteúdo se houver espaço extra */
-    flex-wrap: wrap; /* Permite quebrar para a linha de baixo em telas menores */
-}
-
-#board-area {
-    /* O #board-area já tem estilos, certifique-se que não conflitam.
-       Pode ser necessário ajustar margens ou larguras se já definidas. */
+    background-color: #f8f8f8; /* Keep original background on hover if occupied */
 }
 
 #moves-area {
-    width: 400px; /* Largura da área da tabela, ajuste conforme necessário */
-    padding: 10px;
+    width: 300px; /* Adjusted width */
+    padding: 15px;
     border: 1px solid #ccc;
-    background-color: #f9f9f9;
-    max-height: 410px; /* Altura máxima igual à da board-area + labels (aprox) */
-    overflow-y: auto; /* Adiciona scroll se o conteúdo exceder a altura */
+    background-color: #fff;
+    max-height: 410px;
+    overflow-y: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
 #moves-area h2 {
     margin-top: 0;
     text-align: center;
     font-size: 1.2em;
+    color: #333;
 }
 
 #moves-table {
     width: 100%;
-    border-collapse: collapse; /* Remove espaços entre as bordas das células */
+    border-collapse: collapse;
     font-size: 0.9em;
 }
 
 #moves-table th, #moves-table td {
     border: 1px solid #ddd;
-    padding: 6px;
-    text-align: left;
+    padding: 8px; /* Increased padding */
+    text-align: center; /* Centered text */
 }
 
 #moves-table th {
@@ -180,26 +174,68 @@ body {
     font-weight: bold;
 }
 
+#moves-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9; /* Zebra striping */
+}
+
 #moves-table tbody tr:hover {
-    background-color: #f0f0f0;
+    background-color: #e0e0e0;
     cursor: pointer;
 }
 
-#moves-table tbody tr td:nth-child(4) { /* Coluna do estado codificado */
-    font-family: monospace;
-    font-size: 0.8em; /* Fonte menor para o estado codificado longo */
-    word-break: break-all; /* Quebra a linha se o estado for muito longo */
-}
-
-#moves-table.table-interaction-disabled tbody tr {
+#moves-table.table-interaction-disabled tbody tr:hover {
+    background-color: initial;
     cursor: not-allowed;
 }
 
-#moves-table.table-interaction-disabled tbody tr:hover {
-    background-color: initial; /* Prevents the hover background color change */
-    /* If 'initial' doesn't give the desired non-hover appearance,
-       you might need to set it explicitly to your row's default background,
-       e.g., background-color: transparent; or background-color: #f9f9f9;
-       depending on your non-hovered row style. */
+/* Controls styling */
+div[style*="text-align: center"] {
+    padding: 10px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 15px !important; /* Ensure spacing */
 }
 
+label {
+    margin-right: 5px;
+    font-weight: bold;
+}
+select, input[type="range"], button {
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    margin-right: 10px; /* Spacing between controls */
+    font-size: 0.9em;
+}
+button {
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+button:hover {
+    background-color: #0056b3;
+}
+button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+input[type="radio"] + label {
+    font-weight: normal;
+    margin-right: 15px;
+}
+fieldset {
+    border-radius: 4px;
+    padding: 10px !important; /* Ensure padding */
+}
+legend {
+    margin-left: 10px; /* Align with other labels */
+}
+
+#game-end-message {
+    padding: 10px;
+    border-radius: 4px;
+    background-color: #e6f7ff; /* Light blue background for messages */
+    border: 1px solid #91d5ff;
+}

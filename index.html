@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,17 +9,16 @@
 </head>
 <body>
 
-<h1>Rastros 7x7</h1>
+<h1 id="game-title">Rastros 7x7</h1>
 
 <div id="main-container">
   <div id="board-area">
     <div id="row-labels">
-      <span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
     </div>
-    <div id="game-board"></div>
+    <div id="game-board">
+    </div>
     <div class="corner-spacer"></div>
     <div id="col-labels">
-      <span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span>
     </div>
   </div>
 
@@ -41,6 +40,23 @@
 <div id="game-end-message" style="margin-top: 20px; text-align: center; font-size: 1.2em; font-weight: bold; color: blue;"></div>
 
 <div style="text-align: center; margin-top: 20px; margin-bottom: 10px;">
+  <label for="board-width-select">Largura (4-7):</label>
+  <select id="board-width-select">
+    <option value="4">4</option>
+    <option value="5">5</option>
+    <option value="6">6</option>
+    <option value="7" selected>7</option>
+  </select>
+  <label for="board-height-select" style="margin-left: 10px;">Altura (4-7):</label>
+  <select id="board-height-select">
+    <option value="4">4</option>
+    <option value="5">5</option>
+    <option value="6">6</option>
+    <option value="7" selected>7</option>
+  </select>
+</div>
+
+<div style="text-align: center; margin-top: 10px; margin-bottom: 10px;">
   <label for="game-value-slider">Dificuldade: <span id="current-slider-value">1</span></label><br>
   <input type="range" id="game-value-slider" min="1" max="10" value="1">
 </div>
@@ -60,6 +76,16 @@
 <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
   <button id="new-game-button">Iniciar Novo Jogo</button>
 </div>
+
+<div id="advanced-controls" style="text-align: center; margin-top:20px; display: none;">
+  <button id="encode-button">Codificar Estado & Jogada IA (Depuração)</button>
+  <div id="encoded-output" style="margin-top:5px; word-break: break-all;"></div>
+  <input type="text" id="decode-input" placeholder="Cole o estado codificado para carregar" style="margin-top:5px; width: 80%;">
+  <button id="decode-button" style="margin-top:5px;">Carregar Estado</button>
+  <div id="decode-message" style="margin-top:5px;"></div>
+</div>
+
+
 <script src="script.js"></script>
 
 </body>
