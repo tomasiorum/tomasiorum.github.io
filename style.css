@@ -4,7 +4,7 @@ body {
     flex-direction: column;
     align-items: center;
     padding-top: 20px;
-    background-color: #f0f0f0; /* Added a light background for the page */
+    background-color: #f0f0f0;
     color: #333;
 }
 
@@ -24,15 +24,16 @@ h1 {
 
 #board-area {
     display: grid;
-    grid-template-columns: 30px auto; /* Largura para rótulos de linha, resto para o tabuleiro */
-    grid-template-rows: auto 30px;    /* Altura para o tabuleiro, altura para rótulos de coluna */
+    grid-template-columns: 30px auto;
+    grid-template-rows: auto 30px;
     width: fit-content;
-    margin: 0 auto; /* Centraliza a área do tabuleiro se não estiver no flex container principal */
+    margin: 0 auto;
     gap: 5px;
     padding: 10px;
     background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    max-width: calc(400px + 30px + 5px); /* max-width do game-board + labels + gap */
 }
 
 #row-labels {
@@ -44,17 +45,18 @@ h1 {
     align-items: center;
     font-weight: bold;
     color: #555;
-    padding-right: 5px; /* Space between labels and board lines */
+    padding-right: 5px;
 }
 
 #game-board {
     grid-column: 2 / 3;
     grid-row: 1 / 2;
-    width: 350px; /* Fixed size, cells will adjust */
-    height: 350px;
+    /* width: 100%;  Será definido por JS para um valor fixo como 350px */
+    max-width: 400px; /* Ainda útil como um limite superior absoluto */
     border: 2px solid black;
-    display: grid; /* grid-template-columns/rows will be set by JS */
-    background-color: #eee; /* Background for the grid area itself */
+    display: grid;
+    background-color: #eee;
+    /* A altura será definida por JS para manter as casas quadradas */
 }
 
 .corner-spacer {
@@ -71,12 +73,12 @@ h1 {
     align-items: center;
     font-weight: bold;
     color: #555;
-    padding-top: 5px; /* Space between labels and board lines */
+    padding-top: 5px;
 }
 
 .square {
     border: 1px solid #ccc;
-    background-color: #f8f8f8; /* Slightly lighter than board bg for contrast */
+    background-color: #f8f8f8;
     cursor: pointer;
     display: flex;
     justify-content: center;
@@ -91,15 +93,15 @@ h1 {
     background-color: #e0e0e0;
 }
 
-.token { /* Black token (trail) */
-    width: 75%; /* Adjusted for potentially smaller cells */
+.token { /* Token preto (rastro) */
+    width: 75%;
     height: 75%;
     background-color: black;
     border-radius: 50%;
     box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
 }
 
-.white-token { /* Current player token */
+.white-token { /* Token do jogador atual */
     width: 75%;
     height: 75%;
     background-color: white;
@@ -109,7 +111,7 @@ h1 {
     box-sizing: border-box;
 }
 
-.number-circle { /* Goal squares */
+.number-circle { /* Casas objetivo */
     width: 70%;
     height: 70%;
     border: 2px solid black;
@@ -118,7 +120,7 @@ h1 {
     justify-content: center;
     align-items: center;
     font-weight: bold;
-    font-size: clamp(12px, 3vw, 18px); /* Responsive font size */
+    font-size: clamp(10px, 2.5vw, 16px);
     color: black;
     background-color: white;
     box-sizing: border-box;
@@ -132,15 +134,14 @@ h1 {
 
 .square.occupied {
     cursor: not-allowed;
-    /* background-color: #ddd; /* Optional: distinct color for occupied squares */
 }
 
 .square.occupied:hover {
-    background-color: #f8f8f8; /* Keep original background on hover if occupied */
+    background-color: #f8f8f8;
 }
 
 #moves-area {
-    width: 300px; /* Adjusted width */
+    width: 300px;
     padding: 15px;
     border: 1px solid #ccc;
     background-color: #fff;
@@ -165,8 +166,8 @@ h1 {
 
 #moves-table th, #moves-table td {
     border: 1px solid #ddd;
-    padding: 8px; /* Increased padding */
-    text-align: center; /* Centered text */
+    padding: 8px;
+    text-align: center;
 }
 
 #moves-table th {
@@ -175,7 +176,7 @@ h1 {
 }
 
 #moves-table tbody tr:nth-child(even) {
-    background-color: #f9f9f9; /* Zebra striping */
+    background-color: #f9f9f9;
 }
 
 #moves-table tbody tr:hover {
@@ -188,13 +189,12 @@ h1 {
     cursor: not-allowed;
 }
 
-/* Controls styling */
 div[style*="text-align: center"] {
     padding: 10px;
     background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    margin-bottom: 15px !important; /* Ensure spacing */
+    margin-bottom: 15px !important;
 }
 
 label {
@@ -205,7 +205,7 @@ select, input[type="range"], button {
     padding: 8px 12px;
     border-radius: 4px;
     border: 1px solid #ccc;
-    margin-right: 10px; /* Spacing between controls */
+    margin-right: 10px;
     font-size: 0.9em;
 }
 button {
@@ -227,15 +227,15 @@ input[type="radio"] + label {
 }
 fieldset {
     border-radius: 4px;
-    padding: 10px !important; /* Ensure padding */
+    padding: 10px !important;
 }
 legend {
-    margin-left: 10px; /* Align with other labels */
+    margin-left: 10px;
 }
 
 #game-end-message {
     padding: 10px;
     border-radius: 4px;
-    background-color: #e6f7ff; /* Light blue background for messages */
+    background-color: #e6f7ff;
     border: 1px solid #91d5ff;
 }
