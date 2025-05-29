@@ -1,200 +1,205 @@
 document.addEventListener('DOMContentLoaded', function() {
 
-    // --- Game Configuration & State ---
-    const boardSize = 7;
-    const totalSquares = boardSize * boardSize; // 49
-    const numberOneSquareIndex = 42; // Bottom-left goal (Row 1, Col a)
-    const numberTwoSquareIndex = 6;  // Top-right goal (Row 7, Col g)
-    const initialWhiteTokenIndex = 18; // Default starting pos (Row 5, Col e - 0-indexed: row 2, col 4)
+    // --- Configuração e Estado do Jogo ---
+    let boardWidth = 7; // Largura padrão
+    let boardHeight = 7; // Altura padrão
+    let totalSquares = boardWidth * boardHeight;
+    let numberOneSquareIndex; // Objetivo do Jogador 1 (canto inferior esquerdo)
+    let numberTwoSquareIndex; // Objetivo do Jogador 2 (canto superior direito)
+    let initialWhiteTokenIndex;
 
     let gameBoardElement;
+    let rowLabelsDiv, colLabelsDiv;
+    let gameTitleElement;
     let currentWhiteTokenIndex;
-    let gameActive; // true if a game is ongoing and board moves are allowed
+    let gameActive;
     let moveCount;
 
-    let moveHistory = [];
     let movesTableBody;
     let jogoModuleInstance = null;
 
-    // DOM element references
-    let aiButton;
-    let messageOutput; // For general status/error messages (decode-message)
-    let gameEndMessageElement; // For game win/loss messages from a live game
+    // Referências a elementos DOM
+    let aiButton, decodeButton; // Para controlos avançados/depuração
+    let messageOutput;
+    let gameEndMessageElement;
     let encodedOutputDiv;
     let decodeInputElement;
     let newGameButtonElement;
-    let movesTableElement; // Reference to the <table> element
+    let movesTableElement;
     let gameValueSlider;
     let currentSliderValueDisplay;
-    let gameModeRadios; // Will hold the NodeList of radio buttons
+    let gameModeRadios;
+    let boardWidthSelect, boardHeightSelect;
+    let movesAreaElement;
+    let jogadaIAButtonElement;
 
-    // Game state variables captured at the start of a new game
-    let selectedGameMode = 'player1_vs_ai'; // Default value
-    let currentGameDifficulty = 1; // Default difficulty
+    let selectedGameMode = 'player1_vs_ai';
+    let currentGameDifficulty = 1;
 
-    aiButton = document.getElementById('encode-button');
-    messageOutput = document.getElementById('decode-message');
-    gameEndMessageElement = document.getElementById('game-end-message');
-    encodedOutputDiv = document.getElementById('encoded-output');
-    decodeInputElement = document.getElementById('decode-input');
-    newGameButtonElement = document.getElementById('new-game-button');
-    movesTableElement = document.getElementById('moves-table');
-    gameValueSlider = document.getElementById('game-value-slider');
-    currentSliderValueDisplay = document.getElementById('current-slider-value');
+    // Inicializar elementos DOM
+    function initializeDomElements() {
+        gameTitleElement = document.getElementById('game-title');
+        gameBoardElement = document.getElementById('game-board');
+        rowLabelsDiv = document.getElementById('row-labels');
+        colLabelsDiv = document.getElementById('col-labels');
 
-    // Get references to game mode radio buttons and set up initial state
-    gameModeRadios = document.querySelectorAll('input[name="game_mode"]');
-    gameModeRadios.forEach(radio => {
-        if (radio.checked) {
-            selectedGameMode = radio.value; // Set initial selected mode
-        }
-        radio.addEventListener('change', (event) => {
-            selectedGameMode = event.target.value;
-            console.log("Selected Game Mode:", selectedGameMode); // For debugging
-        });
+        aiButton = document.getElementById('encode-button');
+        decodeButton = document.getElementById('decode-button');
+        messageOutput = document.getElementById('decode-message');
+        gameEndMessageElement = document.getElementById('game-end-message');
+        encodedOutputDiv = document.getElementById('encoded-output');
+        decodeInputElement = document.getElementById('decode-input');
+
+        newGameButtonElement = document.getElementById('new-game-button');
+        movesTableElement = document.getElementById('moves-table');
+        movesTableBody = movesTableElement?.getElementsByTagName('tbody')[0];
+        movesAreaElement = document.getElementById('moves-area');
+        jogadaIAButtonElement = document.getElementById('usar_ia');
+
+        gameValueSlider = document.getElementById('game-value-slider');
+        currentSliderValueDisplay = document.getElementById('current-slider-value');
+        gameModeRadios = document.querySelectorAll('input[name="game_mode"]');
+
+        boardWidthSelect = document.getElementById('board-width-select');
+        boardHeightSelect = document.getElementById('board-height-select');
+    }
+
+    initializeDomElements();
+
+    jogadaIAButtonElement.addEventListener('click', () => {
+        encodeGameStateToBigIntAndPlayAI();
     });
 
 
-    movesTableBody = document.getElementById('moves-table')?.getElementsByTagName('tbody')[0];
-    if (!movesTableBody) {
-        console.warn("Moves table body (tbody) not found during initial setup. Table functionality might be affected.");
-    }
-
+    // Event Listeners
     if (newGameButtonElement) {
         newGameButtonElement.addEventListener('click', () => {
-            // Retrieve difficulty value from slider AT THE TIME the button is clicked
-            const difficultyValue = gameValueSlider.value;
-            currentGameDifficulty = parseInt(difficultyValue, 10); // Store as a number
-
-            // selectedGameMode is already updated by the 'change' event listener on radio buttons
-
-            console.log("Starting New Game with:");
-            console.log("  Difficulty:", currentGameDifficulty); // Use the stored value
-            console.log("  Game Mode:", selectedGameMode);
-
-            // Now initGame can potentially use these values to set up the game logic
-            initGame(); // This will start a new, active game
+            currentGameDifficulty = parseInt(gameValueSlider.value, 10);
+            boardWidth = parseInt(boardWidthSelect.value, 10);
+            boardHeight = parseInt(boardHeightSelect.value, 10);
+            // console.log("A iniciar Novo Jogo com:");
+            // console.log(`  Dimensões: ${boardWidth}x${boardHeight}`);
+            // console.log("  Dificuldade:", currentGameDifficulty);
+            // console.log("  Modo de Jogo:", selectedGameMode);
+            initGame();
         });
     } else {
-        console.error('New Game Button (id="new-game-button") not found in the DOM!');
+        console.error('Botão Novo Jogo não encontrado!');
     }
 
-    // Listener for the slider - only updates the display, not the active game difficulty
     if (gameValueSlider && currentSliderValueDisplay) {
         gameValueSlider.addEventListener('input', () => {
             currentSliderValueDisplay.textContent = gameValueSlider.value;
-            // console.log("Slider value:", gameValueSlider.value); // For debugging
         });
-    } else {
-        console.error('Game Value Slider or display element not found!');
     }
 
-    if(aiButton) aiButton.disabled = true;
+    gameModeRadios.forEach(radio => {
+        if (radio.checked) selectedGameMode = radio.value;
+        radio.addEventListener('change', (event) => {
+            selectedGameMode = event.target.value;
+        });
+    });
 
+    // Inicialização do Módulo Wasm
     if (typeof createJogoModule === "function") {
         createJogoModule()
             .then(instance => {
                 jogoModuleInstance = instance;
-                console.log("Jogo Wasm Module Initialized!");
-                updateControlsBasedOnGameState(); // Update based on initial game state
-                if(messageOutput) messageOutput.textContent = "Wasm module loaded.";
+                // console.log("Módulo Jogo Wasm Inicializado!");
+                if (messageOutput) messageOutput.textContent = "Módulo Wasm carregado.";
+                updateControlsBasedOnGameState();
             })
             .catch(err => {
-                console.error("Error initializing Jogo Wasm Module:", err);
-                if(messageOutput) messageOutput.textContent = "Failed to load Wasm module. Check console. Details: " + err;
+                console.error("Erro ao inicializar Módulo Jogo Wasm:", err);
+                if (messageOutput) messageOutput.textContent = "Falha ao carregar módulo Wasm. Verifique a consola.";
                 updateControlsBasedOnGameState();
             });
     } else {
-        console.error("createJogoModule is not defined. Ensure jogo_module.js is loaded correctly.");
-        if(messageOutput) messageOutput.textContent = "Error: Jogo module script not found.";
+        console.error("createJogoModule não está definido. Garanta que jogo_module.js foi carregado corretamente.");
+        if (messageOutput) messageOutput.textContent = "Erro: Script do módulo Jogo não encontrado.";
         updateControlsBasedOnGameState();
     }
 
-    // --- Helper Function: Update UI Controls Based on Game State ---
-    function updateControlsBasedOnGameState() {
-        if (!gameActive) { // Game is NOT active (ended, viewing history, or not started)
-            if (aiButton) aiButton.disabled = true; // AI moves only during an active game
-            if (movesTableElement) movesTableElement.classList.remove('table-interaction-disabled'); // Enable table interaction
+    function updateGameConstants() {
+        totalSquares = boardWidth * boardHeight;
+        numberOneSquareIndex = (boardHeight - 1) * boardWidth;
+        numberTwoSquareIndex = (0 * boardWidth) + (boardWidth - 1);
 
-            // Enable game mode and difficulty controls
-            if (gameValueSlider) gameValueSlider.disabled = false;
-            if (gameModeRadios) {
-                gameModeRadios.forEach(radio => {
-                    radio.disabled = false;
-                });
-            }
-        } else { // Game IS active
-            if (aiButton) {
-                if (selectedGameMode === 'two_players') {
-                    aiButton.disabled = true;
-                } else {
-                    aiButton.disabled = !jogoModuleInstance; // Enable if module loaded in AI modes
-                }
-            }
-            if (movesTableElement) movesTableElement.classList.add('table-interaction-disabled'); // Disable table interaction
-
-            // Disable game mode and difficulty controls
-            if (gameValueSlider) gameValueSlider.disabled = true;
-            if (gameModeRadios) {
-                gameModeRadios.forEach(radio => {
-                    radio.disabled = true;
-                });
-            }
+        if (boardWidth === 7 && boardHeight === 7) {
+            initialWhiteTokenIndex = 18;
+        } else {
+            initialWhiteTokenIndex = 0;
         }
     }
 
-    // --- Helper Function: Set Game End Message (for live games ending) ---
+    function updateBoardLabels() {
+        if (!rowLabelsDiv || !colLabelsDiv) return;
+        rowLabelsDiv.innerHTML = '';
+        for (let i = 0; i < boardHeight; i++) {
+            const span = document.createElement('span');
+            span.textContent = boardHeight - i;
+            rowLabelsDiv.appendChild(span);
+        }
+
+        colLabelsDiv.innerHTML = '';
+        for (let i = 0; i < boardWidth; i++) {
+            const span = document.createElement('span');
+            span.textContent = String.fromCharCode('a'.charCodeAt(0) + i);
+            colLabelsDiv.appendChild(span);
+        }
+    }
+
+    function updateControlsBasedOnGameState() {
+        const isPlayable = gameActive && jogoModuleInstance;
+        if (aiButton) aiButton.disabled = !isPlayable || selectedGameMode === 'two_players';
+
+        if (movesTableElement) {
+            movesTableElement.classList.toggle('table-interaction-disabled', gameActive);
+        }
+        if (gameValueSlider) gameValueSlider.disabled = gameActive;
+        if (boardWidthSelect) boardWidthSelect.disabled = gameActive;
+        if (boardHeightSelect) boardHeightSelect.disabled = gameActive;
+
+        gameModeRadios.forEach(radio => { radio.disabled = gameActive; });
+    }
+
     function setGameEndMessage(message) {
         if (gameEndMessageElement) {
             gameEndMessageElement.textContent = message;
         }
-        // gameActive should have been set to false by the caller (checkWinCondition, handleSquareClick stalemate)
-        updateControlsBasedOnGameState(); // This will re-enable table interaction
     }
 
-
-    // --- Helper Function: Get Square Element by Index ---
     function getSquareElementByIndex(index) {
-        if (index < 0 || index >= totalSquares) {
-            return null;
-        }
-        if (!gameBoardElement) {
-            gameBoardElement = document.getElementById('game-board');
-            if (!gameBoardElement) {
-                console.error("getSquareElementByIndex: Game board element not found!");
-                return null;
-            }
-        }
+        if (index < 0 || index >= totalSquares || !gameBoardElement) return null;
         return gameBoardElement.querySelector(`.square[data-square-number="${index}"]`);
     }
 
-    // --- Helper: Add Number Circle to a Square ---
     function addNumberCircle(squareElement, number) {
         if (!squareElement) return;
-        // squareElement.innerHTML = ''; // Ensure it's clean before adding, handled by initGame(true) usually
+        squareElement.innerHTML = '';
         const numberCircle = document.createElement('div');
         numberCircle.classList.add('number-circle', `number-${number}`);
         numberCircle.textContent = number.toString();
         squareElement.appendChild(numberCircle);
     }
 
-    // --- Helper: Display General Status/Error Messages ---
     function setMessage(message, isError = false) {
         if (messageOutput) {
             messageOutput.textContent = message;
-            messageOutput.style.color = isError ? 'red' : (message.includes("Displaying state:") ? 'blue' : 'green');
+            messageOutput.style.color = isError ? 'red' : (message.includes("Exibindo estado:") ? 'blue' : 'green');
+        } else if (isError) {
+            console.error(message);
         }
     }
 
-    // --- Helper Function: Check if a Target Index is Adjacent to Current ---
     function isMoveAdjacent(targetIndex, currentIndex) {
         if (targetIndex < 0 || targetIndex >= totalSquares) return false;
         if (targetIndex === currentIndex) return false;
 
-        const currentRow = Math.floor(currentIndex / boardSize);
-        const currentCol = currentIndex % boardSize;
-        const targetRow = Math.floor(targetIndex / boardSize);
-        const targetCol = targetIndex % boardSize;
+        const currentRow = Math.floor(currentIndex / boardWidth);
+        const currentCol = currentIndex % boardWidth;
+        const targetRow = Math.floor(targetIndex / boardWidth);
+        const targetCol = targetIndex % boardWidth;
 
         const rowDiff = Math.abs(targetRow - currentRow);
         const colDiff = Math.abs(targetCol - currentCol);
@@ -202,58 +207,42 @@ document.addEventListener('DOMContentLoaded', function() {
         return rowDiff <= 1 && colDiff <= 1;
     }
 
-    // --- Helper Function: Check for Win Condition (Reaching Goal in an active game) ---
     function checkWinCondition(currentIndex) {
         let winner = null;
-        if (currentIndex === numberOneSquareIndex) {
-            winner = 1;
-        } else if (currentIndex === numberTwoSquareIndex) {
-            winner = 2;
-        }
+        if (currentIndex === numberOneSquareIndex) winner = 1;
+        else if (currentIndex === numberTwoSquareIndex) winner = 2;
 
         if (winner !== null) {
-            gameActive = false; // Mark game as ended
-            setGameEndMessage(`Jogador ${winner} ganhou!`); // Display win message
+            gameActive = false;
+            setGameEndMessage(`Jogador ${winner} ganhou!`);
+            updateControlsBasedOnGameState();
             return true;
         }
         return false;
     }
 
-    // --- Helper Function: Check if any valid moves exist from current position ---
-    function canPlayerMove(currentIndex, context = "move") { // context can be 'move', 'init', 'load_check'
-        let foundValidMove = false;
-        if (context !== 'load_check') console.log(`canPlayerMove (context: ${context}) called for index ${currentIndex}`);
+    function canPlayerMove(currentIndex, context = "move") {
+        for (let r_offset = -1; r_offset <= 1; r_offset++) {
+            for (let c_offset = -1; c_offset <= 1; c_offset++) {
+                if (r_offset === 0 && c_offset === 0) continue;
 
+                const currentSquareRow = Math.floor(currentIndex / boardWidth);
+                const currentSquareCol = currentIndex % boardWidth;
+                const targetRow = currentSquareRow + r_offset;
+                const targetCol = currentSquareCol + c_offset;
 
-        for (let rowOffset = -1; rowOffset <= 1; rowOffset++) {
-            for (let colOffset = -1; colOffset <= 1; colOffset++) {
-                if (rowOffset === 0 && colOffset === 0) continue;
-
-                const currentRow = Math.floor(currentIndex / boardSize);
-                const currentCol = currentIndex % boardSize;
-                const targetRow = currentRow + rowOffset;
-                const targetCol = currentCol + colOffset;
-
-                if (targetRow >= 0 && targetRow < boardSize && targetCol >= 0 && targetCol < boardSize) {
-                    const targetIndex = targetRow * boardSize + targetCol;
+                if (targetRow >= 0 && targetRow < boardHeight && targetCol >= 0 && targetCol < boardWidth) {
+                    const targetIndex = targetRow * boardWidth + targetCol;
                     const targetSquareElement = getSquareElementByIndex(targetIndex);
-                    // When checking for canPlayerMove, an occupied square means no move there.
                     if (targetSquareElement && !targetSquareElement.classList.contains('occupied')) {
-                        if (context !== 'load_check') console.log(`  FOUND VALID MOVE at ${targetIndex}`);
-                        foundValidMove = true;
-                        break;
+                        return true;
                     }
                 }
             }
-            if (foundValidMove) break;
         }
-        if (context !== 'load_check' && !foundValidMove) {
-            console.warn(`canPlayerMove (context: ${context}): Did NOT find any valid moves for index ${currentIndex}!`);
-        }
-        return foundValidMove;
+        return false;
     }
 
-    // --- Helper Function: Update Goal Highlight ---
     function updateGoalHighlight() {
         const goalSquare1 = getSquareElementByIndex(numberOneSquareIndex);
         const goalSquare2 = getSquareElementByIndex(numberTwoSquareIndex);
@@ -263,15 +252,15 @@ document.addEventListener('DOMContentLoaded', function() {
         if (numberCircle1) numberCircle1.classList.remove('highlighted-goal');
         if (numberCircle2) numberCircle2.classList.remove('highlighted-goal');
 
-        // Always highlight based on moveCount to show whose turn it was/is
-        if (moveCount % 2 === 0) { // Player 1's turn (or would be)
+        if (!gameActive) return;
+
+        if (moveCount % 2 === 0) {
             if (numberCircle1) numberCircle1.classList.add('highlighted-goal');
-        } else { // Player 2's turn (or would be)
+        } else {
             if (numberCircle2) numberCircle2.classList.add('highlighted-goal');
         }
     }
 
-    // --- Encoding Function (JUST for current state, NO AI MOVE) ---
     function encodeCurrentStateOnly() {
         let encodedState = 0n;
         for (let i = 0; i < totalSquares; i++) {
@@ -280,468 +269,420 @@ document.addEventListener('DOMContentLoaded', function() {
                 encodedState |= (1n << BigInt(i));
             }
         }
-        const height = 7n;
-        encodedState |= (height << 50n);
-        const width = 7n;
-        encodedState |= (width << 53n);
-        const currentPlayerBit = BigInt(moveCount % 2); // Player whose turn it IS NOW
+        encodedState |= (BigInt(boardHeight) << 50n);
+        encodedState |= (BigInt(boardWidth) << 53n);
+        const currentPlayerBit = BigInt(moveCount % 2);
         encodedState |= (currentPlayerBit << 56n);
         const tokenPosition = BigInt(currentWhiteTokenIndex);
         encodedState |= (tokenPosition << 58n);
         return encodedState;
     }
 
-
-    // --- Encoding Function (includes AI move) ---
     function encodeGameStateToBigIntAndPlayAI() {
         if (!jogoModuleInstance) {
             setMessage("Módulo do jogo não carregado. Jogada da IA não disponível.", true);
             return null;
         }
-        if (!gameActive) { // AI should only play if game is active
+        if (!gameActive) {
             setMessage("O jogo não está ativo. IA não pode jogar.", true);
             return null;
         }
 
-        // Check if it's currently the AI's turn based on the selected game mode
-        const currentPlayer = (moveCount % 2) + 1; // 1 or 2
+        const currentPlayer = (moveCount % 2) + 1;
         let isAITurn = false;
-        if (selectedGameMode === 'player1_vs_ai' && currentPlayer === 2) {
-            isAITurn = true;
-        } else if (selectedGameMode === 'player2_vs_ai' && currentPlayer === 1) {
-            isAITurn = true;
-        }
+        if (selectedGameMode === 'player1_vs_ai' && currentPlayer === 2) isAITurn = true;
+        else if (selectedGameMode === 'player2_vs_ai' && currentPlayer === 1) isAITurn = true;
 
-        if (!isAITurn) {
+        /*if (!isAITurn) {
             setMessage("Não é a vez da IA jogar neste modo ou turno.", true);
-            return null; // Not AI's turn
-        }
+            return null;
+        }*/
 
-
-        let encodedState = 0n; // Encode current state to pass to AI
-
-        for (let i = 0; i < totalSquares; i++) {
-            const square = getSquareElementByIndex(i);
-            if (square && square.classList.contains('occupied')) {
-                encodedState |= (1n << BigInt(i));
-            }
-        }
-        const height = 7n;
-        encodedState |= (height << 50n);
-        const width = 7n;
-        encodedState |= (width << 53n);
-        const currentPlayerBit = BigInt(moveCount % 2);
-        encodedState |= (currentPlayerBit << 56n);
-        const tokenPosition = BigInt(currentWhiteTokenIndex);
-        encodedState |= (tokenPosition << 58n);
-
-        // Use the difficulty stored when the new game was started
+        const encodedState = encodeCurrentStateOnly();
         const dificuldade = 2 + (currentGameDifficulty - 1) * 5;
-        console.log("AI Difficulty used:", dificuldade); // Log the difficulty being used
 
         try {
             const aiMoveIndex = jogoModuleInstance._jogadaSite(encodedState, dificuldade);
-            console.log(`AI decided to move to square index: ${aiMoveIndex}`);
 
             const squareElement = getSquareElementByIndex(aiMoveIndex);
-            // AI move must also be valid
             if (squareElement && isMoveAdjacent(aiMoveIndex, currentWhiteTokenIndex) && !squareElement.classList.contains('occupied')) {
-                squareElement.click(); // This will trigger handleSquareClick for the AI's move
+                squareElement.click();
             } else {
-                console.error("AI attempted an invalid move to index:", aiMoveIndex);
-                setMessage("IA tentou uma jogada inválida.", true);
-                // Game continues with human player if AI fails, or could be AI's loss if strict.
+                console.error("IA tentou uma jogada inválida para o índice:", aiMoveIndex, "Atual:", currentWhiteTokenIndex, "Ocupado:", squareElement ? squareElement.classList.contains('occupied') : 'N/A');
+                setMessage("IA tentou uma jogada inválida. O jogo pode estar num estado inesperado.", true);
             }
-            return encodeCurrentStateOnly(); // Return state AFTER AI's potential move
+            return encodeCurrentStateOnly();
         } catch (e) {
-            console.error("Error during AI move execution:", e);
+            console.error("Erro durante a execução da jogada da IA:", e);
             setMessage("Erro ao executar a jogada da IA.", true);
-            return encodedState; // Return state before AI attempt
+            return encodedState;
         }
     }
 
-    // --- Decoding Function (Extracts data from BigInt) ---
     function decodeBigIntToGameState(encodedString) {
         try {
             const encodedState = BigInt(encodedString.trim());
-            const tokenIndex = Number((encodedState >> 58n) & 63n);    // bits 58-63
-            const playerBit = Number((encodedState >> 56n) & 1n);     // bit 56 (0 for P1, 1 for P2)
-            const width = Number((encodedState >> 53n) & 7n);       // bits 53-55
-            const height = Number((encodedState >> 50n) & 7n);      // bits 50-52
-            // bits 0-48 for board occupation
+            const decodedTokenIndex = Number((encodedState >> 58n) & 0x3Fn);
+            const decodedPlayerBit = Number((encodedState >> 56n) & 1n);
+            const decodedWidth = Number((encodedState >> 53n) & 0x7n);
+            const decodedHeight = Number((encodedState >> 50n) & 0x7n);
 
-            if (width !== boardSize || height !== boardSize) { // Use configured boardSize
-                console.warn(`Decoded dimensions are ${width}x${height}, expected ${boardSize}x${boardSize}.`);
-                // Potentially handle this as an error or adapt if dynamic board sizes were intended
-            }
-            if (tokenIndex < 0 || tokenIndex >= totalSquares) {
-                console.error(`Decoded token index ${tokenIndex} is out of bounds.`);
-                setMessage(`Error: Decoded token index ${tokenIndex} is out of bounds.`, true);
+            if (decodedWidth < 4 || decodedWidth > 7 || decodedHeight < 4 || decodedHeight > 7) {
+                setMessage(`Erro: Dimensões decodificadas (${decodedWidth}x${decodedHeight}) estão fora do intervalo suportado (4-7).`, true);
                 return null;
             }
 
-            const boardState = []; // Array of booleans (true if occupied by black token)
-            for (let i = 0; i < totalSquares; i++) {
-                const bitIsSet = ((encodedState >> BigInt(i)) & 1n) === 1n;
-                boardState.push(bitIsSet);
+            const decodedTotalSquares = decodedWidth * decodedHeight;
+            if (decodedTokenIndex < 0 || decodedTokenIndex >= decodedTotalSquares) {
+                setMessage(`Erro: Índice do token decodificado (${decodedTokenIndex}) está fora dos limites para o tabuleiro ${decodedWidth}x${decodedHeight}.`, true);
+                return null;
             }
-            // playerBit is whose turn it is (0 for P1, 1 for P2). This matches moveCount % 2.
-            // So, moveCountParity should be this playerBit.
-            return {
-                tokenIndex: tokenIndex,
-                moveCountParity: playerBit,
-                boardState: boardState
-            };
 
+            const boardState = [];
+            for (let i = 0; i < decodedTotalSquares; i++) {
+                boardState.push(((encodedState >> BigInt(i)) & 1n) === 1n);
+            }
+            return {
+                tokenIndex: decodedTokenIndex,
+                moveCountParity: decodedPlayerBit,
+                boardState,
+                width: decodedWidth,
+                height: decodedHeight
+            };
         } catch (error) {
-            console.error("Error decoding BigInt string:", error);
-            setMessage(`Error decoding input: ${error.message}`, true);
+            console.error("Erro ao decodificar string BigInt:", error);
+            setMessage(`Erro ao decodificar entrada: ${error.message}`, true);
             return null;
         }
     }
 
-    // --- Function to Apply Decoded State to Board (for viewing) ---
     function applyDecodedState(state, source = 'unknown') {
         if (!state) {
-            setMessage("Failed to decode or apply state.", true);
+            setMessage("Falha ao decodificar ou aplicar estado.", true);
             return;
         }
-        console.log("Applying decoded state for viewing from:", source, state);
-        if (gameEndMessageElement) gameEndMessageElement.textContent = ''; // Clear previous live game end messages
+        if (gameEndMessageElement) gameEndMessageElement.textContent = '';
 
-        if (source === 'input') { // If loading from text input, clear the current visual history
-            moveHistory = [];
-            if (movesTableBody) {
-                movesTableBody.innerHTML = '';
-            }
-        }
+        boardWidth = state.width;
+        boardHeight = state.height;
 
-        initGame(true); // Clears board, sets up squares, but doesn't reset full game logic
+        if (boardWidthSelect) boardWidthSelect.value = boardWidth;
+        if (boardHeightSelect) boardHeightSelect.value = boardHeight;
+
+        initGame(true);
 
         currentWhiteTokenIndex = state.tokenIndex;
-        moveCount = state.moveCountParity; // This sets whose turn it *would have been*
+        moveCount = state.moveCountParity;
 
-        // Place tokens on board
         for (let i = 0; i < totalSquares; i++) {
             const squareElement = getSquareElementByIndex(i);
-            if (squareElement) squareElement.innerHTML = ''; // Clear square first
+            if (!squareElement) continue;
 
-            if (i === numberOneSquareIndex) addNumberCircle(squareElement, 1);
-            else if (i === numberTwoSquareIndex) addNumberCircle(squareElement, 2);
+            if (state.boardState[i]) {
+                if (i === currentWhiteTokenIndex) continue;
 
-            if (state.boardState[i]) { // Occupied by black token in the loaded state
-                // Ensure black token isn't placed on the white token's current square or on goal squares
-                // (unless the goal itself is supposed to be black, which is not standard for this game)
-                if (i === currentWhiteTokenIndex) continue; // White token takes precedence
-                // If a goal square is in boardState, it's unusual, usually goals are for white to reach
-                // or are empty until white reaches them.
-                if (squareElement && !(i === numberOneSquareIndex || i === numberTwoSquareIndex)) {
+                if (i === numberOneSquareIndex || i === numberTwoSquareIndex) {
+                } else {
                     const blackToken = document.createElement('div');
                     blackToken.classList.add('token');
                     squareElement.appendChild(blackToken);
                     squareElement.classList.add('occupied');
-                } else if (squareElement && (i === numberOneSquareIndex || i === numberTwoSquareIndex)) {
-                    console.warn(`Loaded state wants black token on goal ${i}. Goal number circle shown instead.`);
                 }
             }
         }
-        // Place the white token
+
         const whiteTokenSquare = getSquareElementByIndex(currentWhiteTokenIndex);
         if (whiteTokenSquare) {
-            // If white token is on a goal square, ensure the number circle is cleared first
             if (whiteTokenSquare.querySelector('.number-circle')) whiteTokenSquare.innerHTML = '';
             const whiteToken = document.createElement('div');
             whiteToken.classList.add('white-token');
             whiteTokenSquare.appendChild(whiteToken);
-            whiteTokenSquare.classList.remove('occupied'); // White token square is not 'occupied' by black
+            whiteTokenSquare.classList.remove('occupied');
         } else {
-            console.error("CRITICAL: Failed to find square for decoded white token index:", currentWhiteTokenIndex);
-            setMessage("Error placing white token from decoded state.", true);
-            // gameActive will be false, controls updated.
+            console.error("CRÍTICO: Falha ao encontrar casa para o índice do token branco decodificado:", currentWhiteTokenIndex);
+            setMessage("Erro ao posicionar token branco do estado decodificado.", true);
         }
 
-        updateGoalHighlight(); // Highlight based on the loaded state's moveCount (whose turn it was)
+        updateGoalHighlight();
+        gameActive = false;
+        updateControlsBasedOnGameState();
 
-        gameActive = false; // KEY: Viewing a loaded state is not an "active" game.
-                            // Board moves are disabled. Table interaction remains enabled.
-
-        // Display information about the loaded state
-        let loadedStateInfo = `Displaying state: Turn for Player ${state.moveCountParity + 1}. `;
-        let wasHistoricGameOver = false;
-
-        if (state.tokenIndex === numberOneSquareIndex) {
-            loadedStateInfo += "This was a winning state for Player 1. ";
-            wasHistoricGameOver = true;
-        } else if (state.tokenIndex === numberTwoSquareIndex) {
-            loadedStateInfo += "This was a winning state for Player 2. ";
-            wasHistoricGameOver = true;
-        } else if (!canPlayerMove(state.tokenIndex, 'load_check')) {
-            const blockedPlayer = state.moveCountParity + 1; // Player whose turn it was in that state
-            loadedStateInfo += `Player ${blockedPlayer} had no available moves in this state. `;
-            wasHistoricGameOver = true;
+        let loadedStateInfo = `Exibindo estado: Tabuleiro ${boardWidth}x${boardHeight}. Vez do Jogador ${state.moveCountParity + 1}. `;
+        if (state.tokenIndex === numberOneSquareIndex) loadedStateInfo += "Este era um estado de vitória para o Jogador 1. ";
+        else if (state.tokenIndex === numberTwoSquareIndex) loadedStateInfo += "Este era um estado de vitória para o Jogador 2. ";
+        else if (!canPlayerMove(state.tokenIndex, 'load_check')) {
+            const losingPlayer = state.moveCountParity + 1;
+            const winningPlayer = losingPlayer === 1 ? 2 : 1;
+            loadedStateInfo += `Jogador ${losingPlayer} não tinha movimentos disponíveis neste estado (Jogador ${winningPlayer} ganharia). `;
         }
-
-        loadedStateInfo += "Click 'Start New Game' to play a new game.";
-        setMessage(loadedStateInfo, false); // Use general message area for info
-        if(wasHistoricGameOver && gameEndMessageElement) {
-            // Can use gameEndMessageElement to emphasize if the loaded state was a game conclusion
-            // gameEndMessageElement.textContent = "The displayed historic state was a game conclusion.";
+        loadedStateInfo += "Clique em 'Iniciar Novo Jogo' para jogar.";
+        setMessage(loadedStateInfo, false);
+        if (source === 'input' && movesTableBody) {
+            movesTableBody.innerHTML = '';
         }
-
-
-        updateControlsBasedOnGameState(); // gameActive is false, so table will be enabled.
     }
 
-    // --- Helper Function: Convert Index to Algebraic Coordinates ---
     function indexToCoords(index) {
         if (index < 0 || index >= totalSquares) return "N/A";
-        const row = boardSize - 1 - Math.floor(index / boardSize);
-        const col = index % boardSize;
+        const row = boardHeight - Math.floor(index / boardWidth);
+        const col = index % boardWidth;
         const colChar = String.fromCharCode('a'.charCodeAt(0) + col);
-        return `${colChar}${row + 1}`;
+        return `${colChar}${row}`;
     }
 
-    // --- Helper Function: Add Move to Table and History ---
-    function addMoveToTable(moveNumber, player, coords, encodedState) {
-        if (!movesTableBody) {
-            console.error("addMoveToTable: Moves table body not found! Cannot add move.");
+    function handleHistoricMoveCellClick() {
+        if (gameActive) {
+            setMessage("Termine ou reinicie o jogo atual para carregar do histórico.", true);
             return;
         }
-
-        const newRow = movesTableBody.insertRow();
-        newRow.insertCell(0).textContent = moveNumber;
-        newRow.insertCell(1).textContent = player;
-        newRow.insertCell(2).textContent = coords;
-        // No 4th cell for encoded state display
-
-        newRow.dataset.encodedState = encodedState.toString(); // Keep for row click functionality
-
-        newRow.addEventListener('click', function() {
-            if (gameActive) { // Prevent loading from history if a game is live
-                console.log("Game is active. Finish or reset the current game to load from history.");
-                setMessage("Finish or reset to load from history.", true);
-                return;
-            }
-
-            const stateToLoad = this.dataset.encodedState;
-            if (stateToLoad) {
-                setMessage("Loading state from history for viewing...", false);
-                const decodedState = decodeBigIntToGameState(stateToLoad);
-                applyDecodedState(decodedState, 'table');
-            }
-        });
-        moveHistory.push({ moveNumber, player, coords, encodedState });
+        const stateToLoad = this.dataset.encodedState;
+        if (stateToLoad) {
+            setMessage("A carregar estado do histórico para visualização...", false);
+            const decodedState = decodeBigIntToGameState(stateToLoad);
+            applyDecodedState(decodedState, 'table-cell');
+        } else {
+            setMessage("Nenhum estado encontrado para esta jogada histórica.", true);
+        }
     }
 
+    function addMoveToTable(gameMoveNumber, player, coords, encodedState) {
+        if (!movesTableBody) return;
+        const tableRowNumber = Math.floor((gameMoveNumber - 1) / 2) + 1;
+        let targetRow;
+        let moveCell;
 
-    // --- Function to Handle Clicks on Squares (only if gameActive) ---
+        if (player === 1) {
+            targetRow = movesTableBody.insertRow();
+            targetRow.insertCell(0).textContent = tableRowNumber;
+            moveCell = targetRow.insertCell(1);
+            targetRow.insertCell(2).textContent = '';
+        } else {
+            if (movesTableBody.rows.length > 0 &&
+                movesTableBody.rows[movesTableBody.rows.length - 1].cells[0] &&
+                movesTableBody.rows[movesTableBody.rows.length - 1].cells[0].textContent == tableRowNumber.toString()) {
+                targetRow = movesTableBody.rows[movesTableBody.rows.length - 1];
+            } else {
+                targetRow = movesTableBody.insertRow();
+                targetRow.insertCell(0).textContent = tableRowNumber;
+                targetRow.insertCell(1).textContent = '';
+            }
+            moveCell = targetRow.cells[2] || targetRow.insertCell(2);
+        }
+
+        if (moveCell) {
+            moveCell.textContent = coords;
+            moveCell.dataset.encodedState = encodedState.toString();
+            moveCell.addEventListener('click', handleHistoricMoveCellClick);
+        }
+    }
+
     function handleSquareClick(event) {
-        if (!gameActive) return; // Board clicks only processed if game is live
-
+        if (!gameActive) return;
         const clickedSquare = event.currentTarget;
         const clickedSquareIndex = parseInt(clickedSquare.dataset.squareNumber, 10);
 
         if (!isMoveAdjacent(clickedSquareIndex, currentWhiteTokenIndex)) return;
         if (clickedSquare.classList.contains('occupied')) return;
 
-        // Player making the move (1 or 2)
         const playerMakingTheMove = (moveCount % 2) + 1;
-        const gameMoveNumber = moveCount + 1; // Overall move number in the game
-        const moveCoords = indexToCoords(clickedSquareIndex);
+        const gameMoveNumberForTable = moveCount + 1;
 
-        // Update previous square to black token
         const previousSquareElement = getSquareElementByIndex(currentWhiteTokenIndex);
         if (previousSquareElement) {
-            previousSquareElement.innerHTML = ''; // Clear previous content (e.g. white token or number)
-            const blackToken = document.createElement('div');
-            blackToken.classList.add('token');
-            previousSquareElement.appendChild(blackToken);
+            previousSquareElement.innerHTML = '';
+            if (!(currentWhiteTokenIndex === numberOneSquareIndex || currentWhiteTokenIndex === numberTwoSquareIndex)) {
+                const blackToken = document.createElement('div');
+                blackToken.classList.add('token');
+                previousSquareElement.appendChild(blackToken);
+            } else {
+                addNumberCircle(previousSquareElement, currentWhiteTokenIndex === numberOneSquareIndex ? 1 : 2);
+            }
             previousSquareElement.classList.add('occupied');
         }
 
-        // Move white token to new square
-        clickedSquare.innerHTML = ''; // Clear new square (e.g. number if it's a goal)
+        clickedSquare.innerHTML = '';
         const whiteToken = document.createElement('div');
         whiteToken.classList.add('white-token');
         clickedSquare.appendChild(whiteToken);
-        clickedSquare.classList.remove('occupied'); // Current square is not 'occupied' by black
-
+        clickedSquare.classList.remove('occupied');
         currentWhiteTokenIndex = clickedSquareIndex;
-        moveCount++; // Increment move count AFTER determining player and processing move
 
-        const encodedStateForTable = encodeCurrentStateOnly(); // Encode state AFTER this move
-        addMoveToTable(gameMoveNumber, playerMakingTheMove, moveCoords, encodedStateForTable);
-        updateGoalHighlight(); // Update for the next player's turn
+        moveCount++;
 
-        if (checkWinCondition(currentWhiteTokenIndex)) {
-            // checkWinCondition sets gameActive = false and calls setGameEndMessage
-            return;
-        }
+        const encodedStateForTable = encodeCurrentStateOnly();
+        const moveCoords = indexToCoords(clickedSquareIndex);
+        addMoveToTable(gameMoveNumberForTable, playerMakingTheMove, moveCoords, encodedStateForTable);
+        updateGoalHighlight();
+
+        if (checkWinCondition(currentWhiteTokenIndex)) return;
 
         if (!canPlayerMove(currentWhiteTokenIndex)) {
-            gameActive = false; // Mark game as ended (stalemate)
-            // The player whose turn it now IS (after moveCount incremented) cannot move.
-            // So the player who just moved (playerMakingTheMove) wins.
-            // Or, if player X moves and player Y has no moves, player X wins.
-            // Current moveCount is for player Y. If Y cannot move, player X (playerMakingTheMove) wins.
-            const winner = playerMakingTheMove;
-            setGameEndMessage(`Encurralado! O jogador ${winner} ganha!`);
+            gameActive = false;
+            setGameEndMessage(`Encurralado! O jogador ${playerMakingTheMove} ganha!`);
+            updateControlsBasedOnGameState();
             return;
         }
 
-        // After a player move, check if it's now the AI's turn and trigger it
         const nextPlayer = (moveCount % 2) + 1;
-        let shouldAIPplay = false;
-        if (selectedGameMode === 'player1_vs_ai' && nextPlayer === 2) {
-            shouldAIPplay = true;
-        } else if (selectedGameMode === 'player2_vs_ai' && nextPlayer === 1) {
-            shouldAIPplay = true;
-        }
+        let shouldAIPlay = false;
+        if (selectedGameMode === 'player1_vs_ai' && nextPlayer === 2) shouldAIPlay = true;
+        else if (selectedGameMode === 'player2_vs_ai' && nextPlayer === 1) shouldAIPlay = true;
 
-        if (shouldAIPplay && gameActive) { // Only trigger AI if game is still active
-            // Use a small timeout to allow the UI to update after the human move
+        if (shouldAIPlay && gameActive) {
             setTimeout(() => {
-                encodeGameStateToBigIntAndPlayAI(); // Trigger the AI move
-            }, 50); // Adjust delay as needed
+                encodeGameStateToBigIntAndPlayAI();
+            }, 100);
         }
-
     }
 
-    // --- Function to Initialize or Reset the Game ---
-    function initGame(calledDuringDecode = false) { // calledDuringDecode = true just sets up board, no game logic reset
-        if (!calledDuringDecode) {
-            console.log("Initializing new game (user action or first load)...");
-        } else {
-            console.log("Initializing board for state display (decode/history)...");
-        }
+    function initGame(calledDuringDecode = false) {
+        // console.log(`DEBUG: initGame START. calledDuringDecode: ${calledDuringDecode}`);
+        // console.log(`DEBUG: initGame - Globals: boardWidth=${boardWidth}, boardHeight=${boardHeight}`);
 
-        gameBoardElement = document.getElementById('game-board');
-        if (!gameBoardElement) {
-            console.error("CRITICAL: Game board element (id='game-board') not found! Cannot initialize.");
-            if(messageOutput) messageOutput.textContent = "Error: Game board element not found.";
+        if (!gameBoardElement || !gameTitleElement) {
+            console.error("CRÍTICO: Elemento do tabuleiro ou título não encontrado durante init!");
             return;
         }
 
+        updateGameConstants();
+        updateBoardLabels();
+        // console.log(`DEBUG: initGame - After updateGameConstants: totalSquares=${totalSquares}`);
+        gameTitleElement.textContent = `Rastros ${boardWidth}x${boardHeight}`;
+
         if (!calledDuringDecode) {
-            // Full reset for a new game
             if (gameEndMessageElement) gameEndMessageElement.textContent = '';
-            setMessage(`New game started. Mode: ${selectedGameMode}, Difficulty: ${currentGameDifficulty}. Player 1's turn.`, false); // Include mode/difficulty
+            setMessage(`Novo jogo iniciado. Modo: ${selectedGameMode}, Dificuldade: ${currentGameDifficulty}. Vez do Jogador 1.`, false);
             if (encodedOutputDiv) encodedOutputDiv.textContent = '';
             if (decodeInputElement) decodeInputElement.value = '';
-
-            moveHistory = [];
-            if (movesTableBody) {
-                movesTableBody.innerHTML = '';
-            }
+            if (movesTableBody) movesTableBody.innerHTML = '';
         }
 
-        gameBoardElement.innerHTML = ''; // Clear board for all init cases
+        gameBoardElement.innerHTML = '';
+        gameBoardElement.style.gridTemplateColumns = `repeat(${boardWidth}, 1fr)`;
+        gameBoardElement.style.gridTemplateRows = `repeat(${boardHeight}, 1fr)`;
+        // console.log(`DEBUG: initGame - Grid templates set for ${boardWidth}x${boardHeight}`);
 
+        // --- LÓGICA DE DIMENSIONAMENTO MODIFICADA ---
+        const TARGET_BOARD_WIDTH_PX = 350; // Largura alvo para o tabuleiro, como era antes
+        gameBoardElement.style.width = `${TARGET_BOARD_WIDTH_PX}px`;
+        // console.log(`DEBUG: initGame - Largura do tabuleiro definida para: ${TARGET_BOARD_WIDTH_PX}px`);
+
+        // Medir a largura renderizada real após definir gameBoardElement.style.width
+        // Isto é importante porque o viewport pode ser menor que TARGET_BOARD_WIDTH_PX
+        const currentBoardRenderedWidth = gameBoardElement.offsetWidth;
+        // console.log(`DEBUG: initGame - Largura renderizada real do tabuleiro (offsetWidth): ${currentBoardRenderedWidth}px`);
+
+
+        if (boardWidth > 0) {
+            const cellWidth = currentBoardRenderedWidth / boardWidth; // Usar a largura renderizada
+            const newBoardHeight = cellWidth * boardHeight;
+            gameBoardElement.style.height = `${newBoardHeight}px`;
+
+            // console.log(`DEBUG: initGame - CellWidth: ${cellWidth}px, newBoardHeight Calculada: ${newBoardHeight}px`);
+            if(movesAreaElement) movesAreaElement.style.maxHeight = `${newBoardHeight + 30 + 5}px`; // 30 para rótulos de col, 5 para gap
+        } else {
+            // console.warn("boardWidth não é positivo, não é possível calcular as dimensões do tabuleiro corretamente. boardWidth:", boardWidth);
+            gameBoardElement.style.height = `${TARGET_BOARD_WIDTH_PX}px`; // Fallback para quadrado
+            // console.log(`DEBUG: initGame - Altura do tabuleiro de fallback (quadrado): ${TARGET_BOARD_WIDTH_PX}px`);
+        }
+        // console.log(`DEBUG: initGame - gameBoardElement.style.height final: ${gameBoardElement.style.height}`);
+        // --- FIM DA LÓGICA DE DIMENSIONAMENTO MODIFICADA ---
+
+        // console.log(`DEBUG: initGame - A iniciar loop para criar ${totalSquares} casas.`);
         for (let i = 0; i < totalSquares; i++) {
             const square = document.createElement('div');
             square.classList.add('square');
             square.dataset.squareNumber = i;
-            // square.innerHTML = ''; // Already done by gameBoardElement.innerHTML
-            square.classList.remove('occupied'); // Ensure all squares are not marked occupied initially
+            square.classList.remove('occupied');
 
             if (i === numberOneSquareIndex) addNumberCircle(square, 1);
             else if (i === numberTwoSquareIndex) addNumberCircle(square, 2);
 
-            if (!calledDuringDecode) { // Only add click listeners for a new, active game
+            if (!calledDuringDecode) {
                 square.addEventListener('click', handleSquareClick);
-            } else { // If just decoding, don't make squares clickable yet
-                // square.style.cursor = 'default'; // Or similar visual cue if needed
             }
             gameBoardElement.appendChild(square);
         }
+        // console.log(`DEBUG: initGame - Criação de casas concluída.`);
 
         if (!calledDuringDecode) {
-            // Setup for a new, active game
             moveCount = 0;
             currentWhiteTokenIndex = initialWhiteTokenIndex;
-            gameActive = true; // This is now an active game
+            gameActive = true;
 
             const startSquare = getSquareElementByIndex(initialWhiteTokenIndex);
-            if(startSquare){
-                if (startSquare.querySelector('.number-circle')) startSquare.innerHTML = ''; // Clear number if starting on a goal
+            if (startSquare) {
+                if (startSquare.querySelector('.number-circle')) startSquare.innerHTML = '';
                 const whiteToken = document.createElement('div');
                 whiteToken.classList.add('white-token');
                 startSquare.appendChild(whiteToken);
                 startSquare.classList.remove('occupied');
             } else {
-                console.error("CRITICAL: Could not find initial start square", initialWhiteTokenIndex);
-                gameActive = false; // Cannot start game
-                setGameEndMessage("Error: Could not place initial token.");
-                // updateControlsBasedOnGameState() is called by setGameEndMessage
+                console.error("CRÍTICO: Não foi possível encontrar a casa inicial:", initialWhiteTokenIndex);
+                gameActive = false;
+                setGameEndMessage("Erro: Não foi possível posicionar o token inicial.");
+                updateControlsBasedOnGameState();
                 return;
             }
 
-            updateGoalHighlight(); // For Player 1
+            updateGoalHighlight();
 
             if (!canPlayerMove(currentWhiteTokenIndex, 'init')) {
-                gameActive = false; // Game cannot start if no initial moves
-                // Player 1 is to move, cannot, so Player 2 wins by default (or game is just stuck).
-                setGameEndMessage(`No initial moves available! Player 2 wins by default!`);
-            } else {
-                console.log("New game active. White token at:", currentWhiteTokenIndex, "Move count:", moveCount);
+                gameActive = false;
+                const winner = (moveCount % 2 === 0) ? 2 : 1;
+                setGameEndMessage(`Sem movimentos iniciais disponíveis! Jogador ${winner} ganha por defeito!`);
             }
-            updateControlsBasedOnGameState(); // Update controls for the new active/inactive game state
 
-            // If Player 2 vs AI mode is selected, trigger the AI's first move
+            updateControlsBasedOnGameState();
+
             if (selectedGameMode === 'player2_vs_ai' && gameActive) {
-                setMessage("New game started. Player 1 (IA)'s turn.", false);
-                // Use a small timeout to allow the board to render before AI moves
-                setTimeout(() => {
-                    encodeGameStateToBigIntAndPlayAI();
-                }, 100); // Adjust delay as needed
-            } else if (selectedGameMode === 'player1_vs_ai' && gameActive) {
-                setMessage("New game started. Player 1 (You)'s turn.", false);
-            } else if (selectedGameMode === 'two_players' && gameActive) {
-                setMessage("New game started. Player 1's turn.", false);
+                setMessage(`Novo jogo. Vez do Jogador 1 (IA).`, false);
+                setTimeout(() => { encodeGameStateToBigIntAndPlayAI(); }, 100);
+            } else {
+                setMessage(`Novo jogo. Vez do Jogador ${ (moveCount % 2) + 1 }.`, false);
             }
-
-
         }
-        // If calledDuringDecode, gameActive is set by applyDecodedState, and controls updated there.
+        // console.log(`DEBUG: initGame FIM.`);
     }
 
-    // --- Event Listeners Setup ---
     if (aiButton && encodedOutputDiv) {
         aiButton.addEventListener('click', () => {
-            // The AI button is now primarily a manual trigger, but its functionality
-            // should still respect game state and mode. The automatic triggering
-            // is handled in handleSquareClick and initGame.
-            encodeGameStateToBigIntAndPlayAI(); // This function now contains the mode/turn checks
+            const state = encodeGameStateToBigIntAndPlayAI();
+            if (state !== null && encodedOutputDiv) {
+                encodedOutputDiv.textContent = `Estado Atual (após tentativa da IA): ${encodeCurrentStateOnly().toString()}`;
+            }
         });
-    } else {
-        console.error("Could not find AI Move button or output div. AI functionality may be affected.");
     }
 
-    const decodeButton = document.getElementById('decode-button');
     if (decodeButton && decodeInputElement) {
         decodeButton.addEventListener('click', () => {
-            if (gameActive) { // Prevent loading if a live game is ongoing
-                setMessage("Please finish or reset the current game before loading a new state for viewing.", true);
+            if (gameActive) {
+                setMessage("Por favor, termine ou reinicie o jogo atual antes de carregar um novo estado.", true);
                 return;
             }
             const encodedString = decodeInputElement.value;
             if (!encodedString) {
-                setMessage("Please enter an encoded state value to view.", true);
+                setMessage("Por favor, insira um valor de estado codificado para visualizar.", true);
                 return;
             }
-            setMessage("Decoding state for viewing...", false);
+            setMessage("A decodificar estado para visualização...", false);
             const decodedState = decodeBigIntToGameState(encodedString);
             if (decodedState) {
                 applyDecodedState(decodedState, 'input');
-            } else {
-                setMessage("Failed to decode the provided state.", true);
             }
         });
-    } else {
-        console.error("Could not find Decode button or input field. Decode functionality may be affected.");
     }
 
-    // --- Start the game when the page loads ---
-    initGame(true); // Starts a new, active game by default
+    boardWidth = parseInt(boardWidthSelect.value, 10);
+    boardHeight = parseInt(boardHeightSelect.value, 10);
 
-}); // End of DOMContentLoaded listener
+    requestAnimationFrame(() => {
+        // console.log("DEBUG: requestAnimationFrame callback - A chamar initGame(true)");
+        initGame(true);
+        gameActive = false;
+        updateControlsBasedOnGameState();
+        setGameEndMessage("Clique em 'Iniciar Novo Jogo' para começar.");
+        if (gameEndMessageElement) gameEndMessageElement.style.color = 'initial';
+    });
+
+}); // Fim do listener DOMContentLoaded

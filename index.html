@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,28 +9,78 @@
 </head>
 <body>
 
-<h1>Rastros 7x7</h1>
+<h1 id="game-title">Rastros 7x7</h1>
+<div id="game-end-message" style="margin-top: 20px; text-align: center; font-size: 1.2em; font-weight: bold; color: blue;"></div>
 
-<div id="main-container">
-  <div id="board-area">
-    <div id="row-labels">
-      <span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+<div id="game-settings-container" style="display: flex; flex-wrap: wrap; justify-content: space-around; align-items: flex-start; gap: 10px; margin-top: 20px; margin-bottom: 10px;">
+
+  <div class="settings-section" style="text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; min-width: 230px; flex-grow: 1; box-sizing: border-box;">
+    <h3 style="margin-top:0; margin-bottom: 12px; font-size: 1.1em; color: #333;">Dimensões</h3>
+    <div style="margin-bottom: 10px;">
+      <label for="board-width-select" style="display: inline-block; margin-bottom: 5px;">Largura (4-7):</label><br>
+      <select id="board-width-select" style="padding: 5px;">
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7" selected>7</option>
+      </select>
     </div>
-    <div id="game-board"></div>
-    <div class="corner-spacer"></div>
-    <div id="col-labels">
-      <span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span>
+    <div>
+      <label for="board-height-select" style="display: inline-block; margin-bottom: 5px;">Altura (4-7):</label><br>
+      <select id="board-height-select" style="padding: 5px;">
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7" selected>7</option>
+      </select>
     </div>
   </div>
 
+  <div class="settings-section" style="text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; min-width: 230px; flex-grow: 1; box-sizing: border-box;">
+    <h3 style="margin-top:0; margin-bottom: 12px; font-size: 1.1em; color: #333;">Dificuldade</h3>
+    <label for="game-value-slider" style="display: inline-block; margin-bottom: 8px;">Nível: <span id="current-slider-value">1</span></label><br>
+    <input type="range" id="game-value-slider" min="1" max="10" value="1" style="width: 80%; max-width: 200px;">
+  </div>
+
+  <div class="settings-section" style="text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; min-width: 230px; flex-grow: 1; box-sizing: border-box;">
+    <fieldset style="border: none; padding: 0; margin: 0;">
+      <legend style="font-weight: bold; margin-bottom: 10px; font-size: 1.1em; width: 100%; text-align: center; color: #333;">Modo de Jogo</legend>
+      <div style="text-align: left; display: inline-block;">
+        <input type="radio" id="player1_vs_ai" name="game_mode" value="player1_vs_ai" checked>
+        <label for="player1_vs_ai">Jogador 1 vs IA</label><br>
+        <input type="radio" id="player2_vs_ai" name="game_mode" value="player2_vs_ai">
+        <label for="player2_vs_ai">Jogador 2 vs IA</label><br>
+        <input type="radio" id="two_players" name="game_mode" value="two_players">
+        <label for="two_players">2 Jogadores</label>
+      </div>
+    </fieldset>
+  </div>
+
+</div>
+<div style="text-align: center; margin-top: 20px; margin-bottom: 20px;">
+  <button id="new-game-button">Iniciar Novo Jogo</button>
+</div>
+<div id="main-container">
+  <div id="board-area">
+    <div id="row-labels">
+    </div>
+    <div id="game-board">
+    </div>
+    <div class="corner-spacer"></div>
+    <div id="col-labels">
+    </div>
+  </div>
+  <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
+    <button id="usar_ia" style="background-color: firebrick">Fazer jogada IA</button>
+  </div>
   <div id="moves-area">
     <h2>Histórico de Jogadas</h2>
     <table id="moves-table">
       <thead>
       <tr>
         <th>Nº</th>
-        <th>Jogador</th>
-        <th>Jogada</th>
+        <th>Jogador 1</th>
+        <th>Jogador 2</th>
       </tr>
       </thead>
       <tbody>
@@ -38,29 +88,41 @@
     </table>
   </div>
 </div>
-<div id="game-end-message" style="margin-top: 20px; text-align: center; font-size: 1.2em; font-weight: bold; color: blue;"></div>
 
-<div style="text-align: center; margin-top: 20px; margin-bottom: 10px;">
-  <label for="game-value-slider">Dificuldade: <span id="current-slider-value">1</span></label><br>
-  <input type="range" id="game-value-slider" min="1" max="10" value="1">
+
+
+
+<div id="advanced-controls" style="text-align: center; margin-top:20px; display: none;">
+  <button id="encode-button">Codificar Estado & Jogada IA (Depuração)</button>
+  <div id="encoded-output" style="margin-top:5px; word-break: break-all;"></div>
+  <input type="text" id="decode-input" placeholder="Cole o estado codificado para carregar" style="margin-top:5px; width: 80%;">
+  <button id="decode-button" style="margin-top:5px;">Carregar Estado</button>
+  <div id="decode-message" style="margin-top:5px;"></div>
 </div>
 
-<div style="text-align: center; margin-top: 10px; margin-bottom: 10px;">
-  <fieldset style="border: none; padding: 0; margin: 0;">
-    <legend style="font-weight: bold; margin-bottom: 5px;">Modo de Jogo:</legend>
-    <input type="radio" id="player1_vs_ai" name="game_mode" value="player1_vs_ai" checked>
-    <label for="player1_vs_ai">Jogador 1 vs IA</label><br>
-    <input type="radio" id="player2_vs_ai" name="game_mode" value="player2_vs_ai">
-    <label for="player2_vs_ai">Jogador 2 vs IA</label><br>
-    <input type="radio" id="two_players" name="game_mode" value="two_players">
-    <label for="two_players">2 Jogadores</label>
-  </fieldset>
-</div>
+<footer id="footerLinks">
+  <hr>
+  <p>
+    <a href="https://www.ua.pt/pt/fabrica/cnjm-jogos-matematicos-2025">CNJM</a> |
+    <a href="https://www.ua.pt/file/82609">Regras</a> |
+    Gatos e Cães |
+    <a href="https://tomasiorum.github.io/">Rastros</a> |
+    Dominório |
+    Produto |
+    <a href="https://danieloliveira1802875.github.io/atari-go/">Atari Go</a> |
+    <a href="http://solutionsupdate.ugent.be/cnjm/nex.html">Nex</a>
+  </p>
+  <p>
+    Trabalho realizado no âmbito do
+    <a href="https://guiadoscursos.uab.pt/ucs/projeto-de-engenharia-informatica/">Projeto de Engenharia Informática</a>,
+    <a href="https://guiadoscursos.uab.pt/cursos/licenciatura-em-engenharia-informatica/">LEI</a>,
+    <a href="https://portal.uab.pt/">UAb</a>
+  </p>
+</footer>
 
-<div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
-  <button id="new-game-button">Iniciar Novo Jogo</button>
-</div>
 <script src="script.js"></script>
 
+
 </body>
+
 </html>
