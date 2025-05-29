@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let gameModeRadios;
     let boardWidthSelect, boardHeightSelect;
     let movesAreaElement;
+    let jogadaIAButtonElement;
 
     let selectedGameMode = 'player1_vs_ai';
     let currentGameDifficulty = 1;
@@ -53,6 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
         movesTableElement = document.getElementById('moves-table');
         movesTableBody = movesTableElement?.getElementsByTagName('tbody')[0];
         movesAreaElement = document.getElementById('moves-area');
+        jogadaIAButtonElement = document.getElementById('usar_ia');
 
         gameValueSlider = document.getElementById('game-value-slider');
         currentSliderValueDisplay = document.getElementById('current-slider-value');
@@ -63,6 +65,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     initializeDomElements();
+
+    jogadaIAButtonElement.addEventListener('click', () => {
+        encodeGameStateToBigIntAndPlayAI();
+    });
+
 
     // Event Listeners
     if (newGameButtonElement) {
@@ -286,10 +293,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (selectedGameMode === 'player1_vs_ai' && currentPlayer === 2) isAITurn = true;
         else if (selectedGameMode === 'player2_vs_ai' && currentPlayer === 1) isAITurn = true;
 
-        if (!isAITurn) {
+        /*if (!isAITurn) {
             setMessage("Não é a vez da IA jogar neste modo ou turno.", true);
             return null;
-        }
+        }*/
 
         const encodedState = encodeCurrentStateOnly();
         const dificuldade = 2 + (currentGameDifficulty - 1) * 5;

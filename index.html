@@ -10,35 +10,7 @@
 <body>
 
 <h1 id="game-title">Rastros 7x7</h1>
-
-<div id="main-container">
-  <div id="board-area">
-    <div id="row-labels">
-    </div>
-    <div id="game-board">
-    </div>
-    <div class="corner-spacer"></div>
-    <div id="col-labels">
-    </div>
-  </div>
-
-  <div id="moves-area">
-    <h2>Histórico de Jogadas</h2>
-    <table id="moves-table">
-      <thead>
-      <tr>
-        <th>Nº</th>
-        <th>Jogador 1</th>
-        <th>Jogador 2</th>
-      </tr>
-      </thead>
-      <tbody>
-      </tbody>
-    </table>
-  </div>
-</div>
 <div id="game-end-message" style="margin-top: 20px; text-align: center; font-size: 1.2em; font-weight: bold; color: blue;"></div>
-
 <div style="text-align: center; margin-top: 20px; margin-bottom: 10px;">
   <label for="board-width-select">Largura (4-7):</label>
   <select id="board-width-select">
@@ -72,10 +44,40 @@
     <label for="two_players">2 Jogadores</label>
   </fieldset>
 </div>
-
 <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
   <button id="new-game-button">Iniciar Novo Jogo</button>
 </div>
+<div id="main-container">
+  <div id="board-area">
+    <div id="row-labels">
+    </div>
+    <div id="game-board">
+    </div>
+    <div class="corner-spacer"></div>
+    <div id="col-labels">
+    </div>
+  </div>
+  <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
+    <button id="usar_ia" style="background-color: firebrick">Fazer jogada IA</button>
+  </div>
+  <div id="moves-area">
+    <h2>Histórico de Jogadas</h2>
+    <table id="moves-table">
+      <thead>
+      <tr>
+        <th>Nº</th>
+        <th>Jogador 1</th>
+        <th>Jogador 2</th>
+      </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+
 
 <div id="advanced-controls" style="text-align: center; margin-top:20px; display: none;">
   <button id="encode-button">Codificar Estado & Jogada IA (Depuração)</button>
@@ -85,8 +87,29 @@
   <div id="decode-message" style="margin-top:5px;"></div>
 </div>
 
+<footer id="footerLinks">
+  <hr>
+  <p>
+    <a href="https://www.ua.pt/pt/fabrica/cnjm-jogos-matematicos-2025">CNJM</a> |
+    <a href="https://www.ua.pt/file/82609">Regras</a> |
+    Gatos e Cães |
+    <a href="https://tomasiorum.github.io/">Rastros</a> |
+    Dominório |
+    Produto |
+    <a href="https://danieloliveira1802875.github.io/atari-go/">Atari Go</a> |
+    <a href="nex.html">Nex</a>
+  </p>
+  <p>
+    Trabalho realizado no âmbito do
+    <a href="https://guiadoscursos.uab.pt/ucs/projeto-de-engenharia-informatica/">Projeto de Engenharia Informática</a>,
+    <a href="https://guiadoscursos.uab.pt/cursos/licenciatura-em-engenharia-informatica/">LEI</a>,
+    <a href="https://portal.uab.pt/">UAb</a>
+  </p>
+</footer>
 
 <script src="script.js"></script>
 
+
 </body>
+
 </html>
