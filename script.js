@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function renderResultsTable() {
         if (!resultsTableBody) return;
-        resultsTableBody.innerHTML = ''; // Limpar tabela
+        resultsTableBody.innerHTML = '';
 
         const sortedBoardSizes = Object.keys(resultsData).sort((a, b) => {
             const [aW, aH] = a.split('x').map(Number);
@@ -73,40 +73,61 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         for (const boardSize of sortedBoardSizes) {
-            const rowData = resultsData[boardSize];
             const row = resultsTableBody.insertRow();
             row.insertCell(0).textContent = boardSize;
+            const sizeData = resultsData[boardSize];
 
-            const p1_vs_ai = rowData.player1_vs_ai;
-            row.insertCell(1).textContent = `V: ${p1_vs_ai.wins} e D: ${p1_vs_ai.losses}`;
+            for (let i = 1; i <= 10; i++) {
+                const cell = row.insertCell(i);
+                const difficultyKey = i.toString();
+                const difficultyData = sizeData[difficultyKey] || {
+                    asPlayer1: { wins: 0, losses: 0 },
+                    asPlayer2: { wins: 0, losses: 0 }
+                };
 
-            const p2_vs_ai = rowData.player2_vs_ai;
-            row.insertCell(2).textContent = `V: ${p2_vs_ai.wins} e D: ${p2_vs_ai.losses}`;
+                const p1Stats = difficultyData.asPlayer1;
+                const p2Stats = difficultyData.asPlayer2;
 
-            const two_players = rowData.two_players;
-            row.insertCell(3).textContent = `V: ${two_players.wins} e D: ${two_players.losses}`;
+                cell.innerHTML =
+                    `<span class="result-line">1: ${p1Stats.wins}/${p1Stats.losses}</span>` +
+                    `<span class="result-line">2: ${p2Stats.wins}/${p2Stats.losses}</span>`;
+            }
         }
     }
 
     function recordResult(winner) {
+        if (selectedGameMode === 'two_players') return;
+
         const boardSizeKey = `${boardWidth}x${boardHeight}`;
-        const gameModeKey = selectedGameMode;
+        const difficultyKey = currentGameDifficulty.toString();
 
         if (!resultsData[boardSizeKey]) {
-            resultsData[boardSizeKey] = {
-                "player1_vs_ai": { wins: 0, losses: 0 },
-                "player2_vs_ai": { wins: 0, losses: 0 },
-                "two_players": { wins: 0, losses: 0 }
+            resultsData[boardSizeKey] = {};
+        }
+        if (!resultsData[boardSizeKey][difficultyKey]) {
+            resultsData[boardSizeKey][difficultyKey] = {
+                asPlayer1: { wins: 0, losses: 0 },
+                asPlayer2: { wins: 0, losses: 0 }
             };
         }
 
-        if (winner === 1) {
-            resultsData[boardSizeKey][gameModeKey].wins++;
-        } else { // winner is 2
-            resultsData[boardSizeKey][gameModeKey].losses++;
+        const stats = resultsData[boardSizeKey][difficultyKey];
+
+        if (selectedGameMode === 'player1_vs_ai') {
+            if (winner === 1) {
+                stats.asPlayer1.wins++;
+            } else {
+                stats.asPlayer1.losses++;
+            }
+        } else if (selectedGameMode === 'player2_vs_ai') {
+            if (winner === 2) {
+                stats.asPlayer2.wins++;
+            } else {
+                stats.asPlayer2.losses++;
+            }
         }
 
-        setCookie("rastrosResults", JSON.stringify(resultsData), 365);
+        setCookie("rastrosResults_v2", JSON.stringify(resultsData), 365);
         renderResultsTable();
     }
 
@@ -175,12 +196,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     initializeDomElements();
 
-    // Carregar resultados dos cookies e renderizar a tabela
-    const savedResults = getCookie("rastrosResults");
+    const savedResults = getCookie("rastrosResults_v2");
     if (savedResults) {
-        resultsData = JSON.parse(savedResults);
-        renderResultsTable();
+        try {
+            resultsData = JSON.parse(savedResults);
+        } catch (e) {
+            console.error("Could not parse results cookie:", e);
+            resultsData = {};
+        }
     }
+    renderResultsTable();
 
 
     updateAiSupport(); // Correr a verificação inicial no carregamento
@@ -198,11 +223,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const dims = sizeValue.split('x');
             boardWidth = parseInt(dims[0], 10);
             boardHeight = parseInt(dims[1], 10);
-
-            // console.log("A iniciar Novo Jogo com:");
-            // console.log(`  Dimensões: ${boardWidth}x${boardHeight}`);
-            // console.log("  Dificuldade:", currentGameDifficulty);
-            // console.log("  Modo de Jogo:", selectedGameMode);
             initGame();
         });
     } else {
@@ -212,6 +232,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (gameValueSlider && currentSliderValueDisplay) {
         gameValueSlider.addEventListener('input', () => {
             currentSliderValueDisplay.textContent = gameValueSlider.value;
+            currentGameDifficulty = parseInt(gameValueSlider.value, 10);
         });
     }
 
@@ -227,7 +248,6 @@ document.addEventListener('DOMContentLoaded', function() {
         createJogoModule()
             .then(instance => {
                 jogoModuleInstance = instance;
-                // console.log("Módulo Jogo Wasm Inicializado!");
                 if (messageOutput) messageOutput.textContent = "Módulo Wasm carregado.";
                 updateControlsBasedOnGameState();
             })
@@ -414,11 +434,6 @@ document.addEventListener('DOMContentLoaded', function() {
         let isAITurn = false;
         if (selectedGameMode === 'player1_vs_ai' && currentPlayer === 2) isAITurn = true;
         else if (selectedGameMode === 'player2_vs_ai' && currentPlayer === 1) isAITurn = true;
-
-        /*if (!isAITurn) {
-            setMessage("Não é a vez da IA jogar neste modo ou turno.", true);
-            return null;
-        }*/
 
         const encodedState = encodeCurrentStateOnly();
         const dificuldade = 2 + (currentGameDifficulty - 1) * 5;
@@ -648,7 +663,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!canPlayerMove(currentWhiteTokenIndex)) {
             gameActive = false;
-            const winner = playerMakingTheMove === 1 ? 2 : 1;
+            const winner = playerMakingTheMove;
             setGameEndMessage(`Encurralado! O jogador ${winner} ganha!`);
             recordResult(winner);
             updateControlsBasedOnGameState();
@@ -668,8 +683,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function initGame(calledDuringDecode = false) {
-        // console.log(`DEBUG: initGame START. calledDuringDecode: ${calledDuringDecode}`);
-        // console.log(`DEBUG: initGame - Globals: boardWidth=${boardWidth}, boardHeight=${boardHeight}`);
 
         if (!gameBoardElement || !gameTitleElement) {
             console.error("CRÍTICO: Elemento do tabuleiro ou título não encontrado durante init!");
@@ -678,8 +691,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         updateGameConstants();
         updateBoardLabels();
-        // console.log(`DEBUG: initGame - After updateGameConstants: totalSquares=${totalSquares}`);
-        //gameTitleElement.textContent = `Rastros ${boardWidth}x${boardHeight}`;
 
         if (!calledDuringDecode) {
             if (gameEndMessageElement) gameEndMessageElement.textContent = '';
@@ -692,35 +703,22 @@ document.addEventListener('DOMContentLoaded', function() {
         gameBoardElement.innerHTML = '';
         gameBoardElement.style.gridTemplateColumns = `repeat(${boardWidth}, 1fr)`;
         gameBoardElement.style.gridTemplateRows = `repeat(${boardHeight}, 1fr)`;
-        // console.log(`DEBUG: initGame - Grid templates set for ${boardWidth}x${boardHeight}`);
 
-        // --- LÓGICA DE DIMENSIONAMENTO MODIFICADA ---
-        const TARGET_BOARD_WIDTH_PX = 350; // Largura alvo para o tabuleiro, como era antes
+        const TARGET_BOARD_WIDTH_PX = 350;
         gameBoardElement.style.width = `${TARGET_BOARD_WIDTH_PX}px`;
-        // console.log(`DEBUG: initGame - Largura do tabuleiro definida para: ${TARGET_BOARD_WIDTH_PX}px`);
 
-        // Medir a largura renderizada real após definir gameBoardElement.style.width
-        // Isto é importante porque o viewport pode ser menor que TARGET_BOARD_WIDTH_PX
         const currentBoardRenderedWidth = gameBoardElement.offsetWidth;
-        // console.log(`DEBUG: initGame - Largura renderizada real do tabuleiro (offsetWidth): ${currentBoardRenderedWidth}px`);
-
 
         if (boardWidth > 0) {
-            const cellWidth = currentBoardRenderedWidth / boardWidth; // Usar a largura renderizada
+            const cellWidth = currentBoardRenderedWidth / boardWidth;
             const newBoardHeight = cellWidth * boardHeight;
             gameBoardElement.style.height = `${newBoardHeight}px`;
 
-            // console.log(`DEBUG: initGame - CellWidth: ${cellWidth}px, newBoardHeight Calculada: ${newBoardHeight}px`);
-            if(movesAreaElement) movesAreaElement.style.maxHeight = `${newBoardHeight + 30 + 5}px`; // 30 para rótulos de col, 5 para gap
+            if(movesAreaElement) movesAreaElement.style.maxHeight = `${newBoardHeight + 30 + 5}px`;
         } else {
-            // console.warn("boardWidth não é positivo, não é possível calcular as dimensões do tabuleiro corretamente. boardWidth:", boardWidth);
-            gameBoardElement.style.height = `${TARGET_BOARD_WIDTH_PX}px`; // Fallback para quadrado
-            // console.log(`DEBUG: initGame - Altura do tabuleiro de fallback (quadrado): ${TARGET_BOARD_WIDTH_PX}px`);
+            gameBoardElement.style.height = `${TARGET_BOARD_WIDTH_PX}px`;
         }
-        // console.log(`DEBUG: initGame - gameBoardElement.style.height final: ${gameBoardElement.style.height}`);
-        // --- FIM DA LÓGICA DE DIMENSIONAMENTO MODIFICADA ---
 
-        // console.log(`DEBUG: initGame - A iniciar loop para criar ${totalSquares} casas.`);
         for (let i = 0; i < totalSquares; i++) {
             const square = document.createElement('div');
             square.classList.add('square');
@@ -735,7 +733,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             gameBoardElement.appendChild(square);
         }
-        // console.log(`DEBUG: initGame - Criação de casas concluída.`);
 
         if (!calledDuringDecode) {
             moveCount = 0;
@@ -775,7 +772,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 setMessage(`Novo jogo. Vez do Jogador ${ (moveCount % 2) + 1 }.`, false);
             }
         }
-        // console.log(`DEBUG: initGame FIM.`);
     }
 
     if (aiButton && encodedOutputDiv) {
@@ -806,17 +802,34 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    currentGameDifficulty = parseInt(gameValueSlider.value, 10);
     const initialSize = boardSizeSelect.value.split('x');
     boardWidth = parseInt(initialSize[0], 10);
     boardHeight = parseInt(initialSize[1], 10);
 
     requestAnimationFrame(() => {
-        // console.log("DEBUG: requestAnimationFrame callback - A chamar initGame(true)");
         initGame(true);
         gameActive = false;
         updateControlsBasedOnGameState();
         setGameEndMessage("Clique em 'Iniciar Novo Jogo' para começar.");
         if (gameEndMessageElement) gameEndMessageElement.style.color = 'initial';
     });
+    const clearResultsButton = document.getElementById('clear-results-button');
+    if (clearResultsButton) {
+        clearResultsButton.addEventListener('click', () => {
+            const userConfirmed = window.confirm("Esta ação apaga o registo de todos os resultados. Tem a certeza?");
+            if (userConfirmed) {
+                // Limpa os dados em memória
+                resultsData = {};
 
-}); // Fim do listener DOMContentLoaded
+                // Apaga o cookie dos resultados
+                setCookie("rastrosResults_v2", "", -1);
+
+                // Atualiza a tabela para a mostrar vazia
+                renderResultsTable();
+
+                console.log("Os resultados foram limpos.");
+            }
+        });
+    }
+});
