@@ -15,23 +15,20 @@
 <div id="game-settings-container" style="display: flex; flex-wrap: wrap; justify-content: space-around; align-items: flex-start; gap: 10px; margin-top: 20px; margin-bottom: 10px;">
 
   <div class="settings-section" style="text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; min-width: 230px; flex-grow: 1; box-sizing: border-box;">
-    <h3 style="margin-top:0; margin-bottom: 12px; font-size: 1.1em; color: #333;">Dimensões</h3>
-    <div style="margin-bottom: 10px;">
-      <label for="board-width-select" style="display: inline-block; margin-bottom: 5px;">Largura (4-7):</label><br>
-      <select id="board-width-select" style="padding: 5px;">
-        <option value="4">4</option>
-        <option value="5">5</option>
-        <option value="6">6</option>
-        <option value="7" selected>7</option>
-      </select>
-    </div>
+    <h3 style="margin-top:0; margin-bottom: 12px; font-size: 1.1em; color: #333;">Tamanho do Tabuleiro</h3>
     <div>
-      <label for="board-height-select" style="display: inline-block; margin-bottom: 5px;">Altura (4-7):</label><br>
-      <select id="board-height-select" style="padding: 5px;">
-        <option value="4">4</option>
-        <option value="5">5</option>
-        <option value="6">6</option>
-        <option value="7" selected>7</option>
+      <label for="board-size-select" style="display: inline-block; margin-bottom: 5px;">Tamanho (LxA):</label><br>
+      <select id="board-size-select" style="padding: 5px;">
+        <option value="5x5">5x5</option>
+        <option value="6x5">6x5</option>
+        <option value="7x5">7x5</option>
+        <option value="8x5">8x5</option>
+        <option value="9x5">9x5</option>
+        <option value="6x6">6x6</option>
+        <option value="6x7">6x7</option>
+        <option value="6x8">6x8</option>
+        <option value="7x7" selected>7x7</option>
+        <option value="custom" disabled hidden>Personalizado</option>
       </select>
     </div>
   </div>

@@ -29,12 +29,42 @@ document.addEventListener('DOMContentLoaded', function() {
     let gameValueSlider;
     let currentSliderValueDisplay;
     let gameModeRadios;
-    let boardWidthSelect, boardHeightSelect;
+    let boardSizeSelect;
     let movesAreaElement;
     let jogadaIAButtonElement;
 
     let selectedGameMode = 'player1_vs_ai';
     let currentGameDifficulty = 1;
+
+    // Lógica para desativar modos de IA para tabuleiros > 7x7
+    function updateAiSupport(width, height) {
+        let w = width;
+        let h = height;
+
+        if (w === undefined || h === undefined) {
+            if (!boardSizeSelect || boardSizeSelect.value === 'custom') return;
+            const dims = boardSizeSelect.value.split('x');
+            w = parseInt(dims[0], 10);
+            h = parseInt(dims[1], 10);
+        }
+
+        const isAiSupported = w <= 7 && h <= 7;
+
+        const p1VsAiRadio = document.getElementById('player1_vs_ai');
+        const p2VsAiRadio = document.getElementById('player2_vs_ai');
+        const twoPlayersRadio = document.getElementById('two_players');
+
+        if (p1VsAiRadio) p1VsAiRadio.disabled = !isAiSupported;
+        if (p2VsAiRadio) p2VsAiRadio.disabled = !isAiSupported;
+
+        if (!isAiSupported && (p1VsAiRadio.checked || p2VsAiRadio.checked)) {
+            if (twoPlayersRadio) {
+                twoPlayersRadio.checked = true;
+                selectedGameMode = 'two_players';
+            }
+        }
+    }
+
 
     // Inicializar elementos DOM
     function initializeDomElements() {
@@ -60,11 +90,14 @@ document.addEventListener('DOMContentLoaded', function() {
         currentSliderValueDisplay = document.getElementById('current-slider-value');
         gameModeRadios = document.querySelectorAll('input[name="game_mode"]');
 
-        boardWidthSelect = document.getElementById('board-width-select');
-        boardHeightSelect = document.getElementById('board-height-select');
+        boardSizeSelect = document.getElementById('board-size-select');
+        if (boardSizeSelect) {
+            boardSizeSelect.addEventListener('change', () => updateAiSupport());
+        }
     }
 
     initializeDomElements();
+    updateAiSupport(); // Correr a verificação inicial no carregamento
 
     jogadaIAButtonElement.addEventListener('click', () => {
         encodeGameStateToBigIntAndPlayAI();
@@ -75,8 +108,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (newGameButtonElement) {
         newGameButtonElement.addEventListener('click', () => {
             currentGameDifficulty = parseInt(gameValueSlider.value, 10);
-            boardWidth = parseInt(boardWidthSelect.value, 10);
-            boardHeight = parseInt(boardHeightSelect.value, 10);
+            const sizeValue = boardSizeSelect.value;
+            const dims = sizeValue.split('x');
+            boardWidth = parseInt(dims[0], 10);
+            boardHeight = parseInt(dims[1], 10);
+
             // console.log("A iniciar Novo Jogo com:");
             // console.log(`  Dimensões: ${boardWidth}x${boardHeight}`);
             // console.log("  Dificuldade:", currentGameDifficulty);
@@ -157,8 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
             movesTableElement.classList.toggle('table-interaction-disabled', gameActive);
         }
         if (gameValueSlider) gameValueSlider.disabled = gameActive;
-        if (boardWidthSelect) boardWidthSelect.disabled = gameActive;
-        if (boardHeightSelect) boardHeightSelect.disabled = gameActive;
+        if (boardSizeSelect) boardSizeSelect.disabled = gameActive;
 
         gameModeRadios.forEach(radio => { radio.disabled = gameActive; });
     }
@@ -366,8 +401,16 @@ document.addEventListener('DOMContentLoaded', function() {
         boardWidth = state.width;
         boardHeight = state.height;
 
-        if (boardWidthSelect) boardWidthSelect.value = boardWidth;
-        if (boardHeightSelect) boardHeightSelect.value = boardHeight;
+        if (boardSizeSelect) {
+            const sizeString = `${boardWidth}x${boardHeight}`;
+            const matchingOption = Array.from(boardSizeSelect.options).find(o => o.value === sizeString);
+            if (matchingOption) {
+                boardSizeSelect.value = sizeString;
+            } else {
+                boardSizeSelect.value = 'custom';
+            }
+            updateAiSupport(boardWidth, boardHeight);
+        }
 
         initGame(true);
 
@@ -673,8 +716,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    boardWidth = parseInt(boardWidthSelect.value, 10);
-    boardHeight = parseInt(boardHeightSelect.value, 10);
+    const initialSize = boardSizeSelect.value.split('x');
+    boardWidth = parseInt(initialSize[0], 10);
+    boardHeight = parseInt(initialSize[1], 10);
 
     requestAnimationFrame(() => {
         // console.log("DEBUG: requestAnimationFrame callback - A chamar initGame(true)");
