@@ -32,9 +32,84 @@ document.addEventListener('DOMContentLoaded', function() {
     let boardSizeSelect;
     let movesAreaElement;
     let jogadaIAButtonElement;
+    let resultsTableBody;
 
     let selectedGameMode = 'player1_vs_ai';
     let currentGameDifficulty = 1;
+    let resultsData = {};
+
+    // --- Gestão de Cookies e Resultados ---
+
+    function setCookie(name, value, days) {
+        let expires = "";
+        if (days) {
+            let date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
+    }
+
+    function getCookie(name) {
+        let nameEQ = name + "=";
+        let ca = document.cookie.split(';');
+        for (let i = 0; i < ca.length; i++) {
+            let c = ca[i];
+            while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+        }
+        return null;
+    }
+
+    function renderResultsTable() {
+        if (!resultsTableBody) return;
+        resultsTableBody.innerHTML = ''; // Limpar tabela
+
+        const sortedBoardSizes = Object.keys(resultsData).sort((a, b) => {
+            const [aW, aH] = a.split('x').map(Number);
+            const [bW, bH] = b.split('x').map(Number);
+            if (aW !== bW) return aW - bW;
+            return aH - bH;
+        });
+
+        for (const boardSize of sortedBoardSizes) {
+            const rowData = resultsData[boardSize];
+            const row = resultsTableBody.insertRow();
+            row.insertCell(0).textContent = boardSize;
+
+            const p1_vs_ai = rowData.player1_vs_ai;
+            row.insertCell(1).textContent = `V: ${p1_vs_ai.wins} e D: ${p1_vs_ai.losses}`;
+
+            const p2_vs_ai = rowData.player2_vs_ai;
+            row.insertCell(2).textContent = `V: ${p2_vs_ai.wins} e D: ${p2_vs_ai.losses}`;
+
+            const two_players = rowData.two_players;
+            row.insertCell(3).textContent = `V: ${two_players.wins} e D: ${two_players.losses}`;
+        }
+    }
+
+    function recordResult(winner) {
+        const boardSizeKey = `${boardWidth}x${boardHeight}`;
+        const gameModeKey = selectedGameMode;
+
+        if (!resultsData[boardSizeKey]) {
+            resultsData[boardSizeKey] = {
+                "player1_vs_ai": { wins: 0, losses: 0 },
+                "player2_vs_ai": { wins: 0, losses: 0 },
+                "two_players": { wins: 0, losses: 0 }
+            };
+        }
+
+        if (winner === 1) {
+            resultsData[boardSizeKey][gameModeKey].wins++;
+        } else { // winner is 2
+            resultsData[boardSizeKey][gameModeKey].losses++;
+        }
+
+        setCookie("rastrosResults", JSON.stringify(resultsData), 365);
+        renderResultsTable();
+    }
+
 
     // Lógica para desativar modos de IA para tabuleiros > 7x7
     function updateAiSupport(width, height) {
@@ -94,9 +169,20 @@ document.addEventListener('DOMContentLoaded', function() {
         if (boardSizeSelect) {
             boardSizeSelect.addEventListener('change', () => updateAiSupport());
         }
+
+        resultsTableBody = document.getElementById('results-table')?.getElementsByTagName('tbody')[0];
     }
 
     initializeDomElements();
+
+    // Carregar resultados dos cookies e renderizar a tabela
+    const savedResults = getCookie("rastrosResults");
+    if (savedResults) {
+        resultsData = JSON.parse(savedResults);
+        renderResultsTable();
+    }
+
+
     updateAiSupport(); // Correr a verificação inicial no carregamento
 
     jogadaIAButtonElement.addEventListener('click', () => {
@@ -250,6 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (winner !== null) {
             gameActive = false;
             setGameEndMessage(`Jogador ${winner} ganhou!`);
+            recordResult(winner);
             updateControlsBasedOnGameState();
             return true;
         }
@@ -561,7 +648,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!canPlayerMove(currentWhiteTokenIndex)) {
             gameActive = false;
-            setGameEndMessage(`Encurralado! O jogador ${playerMakingTheMove} ganha!`);
+            const winner = playerMakingTheMove === 1 ? 2 : 1;
+            setGameEndMessage(`Encurralado! O jogador ${winner} ganha!`);
+            recordResult(winner);
             updateControlsBasedOnGameState();
             return;
         }
@@ -674,6 +763,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 gameActive = false;
                 const winner = (moveCount % 2 === 0) ? 2 : 1;
                 setGameEndMessage(`Sem movimentos iniciais disponíveis! Jogador ${winner} ganha por defeito!`);
+                recordResult(winner);
             }
 
             updateControlsBasedOnGameState();
