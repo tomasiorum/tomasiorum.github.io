@@ -547,7 +547,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateGameConstants();
         updateBoardLabels();
         // console.log(`DEBUG: initGame - After updateGameConstants: totalSquares=${totalSquares}`);
-        gameTitleElement.textContent = `Rastros ${boardWidth}x${boardHeight}`;
+        //gameTitleElement.textContent = `Rastros ${boardWidth}x${boardHeight}`;
 
         if (!calledDuringDecode) {
             if (gameEndMessageElement) gameEndMessageElement.textContent = '';

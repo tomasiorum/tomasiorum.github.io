@@ -239,3 +239,20 @@ legend {
     background-color: #e6f7ff;
     border: 1px solid #91d5ff;
 }
+
+#footer-iframe {
+    width: 100%;
+    border: none;
+    display: block;
+    overflow: hidden;
+
+    /* Default height for single-line view */
+    height: 30px;
+}
+
+/* Adjust height for two-line view on smaller screens */
+@media (max-width: 768px) {
+    #footer-iframe {
+        height: 60px;
+    }
+}
