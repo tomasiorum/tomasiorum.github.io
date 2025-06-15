@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
             h = parseInt(dims[1], 10);
         }
 
-        const isAiSupported = w <= 7 && h <= 7;
+        const isAiSupported = w <= 10 && h <= 10;
 
         const p1VsAiRadio = document.getElementById('player1_vs_ai');
         const p2VsAiRadio = document.getElementById('player2_vs_ai');
@@ -209,6 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     updateAiSupport(); // Correr a verificação inicial no carregamento
+
 
     jogadaIAButtonElement.addEventListener('click', () => {
         encodeGameStateToBigIntAndPlayAI();
@@ -411,10 +412,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 encodedState |= (1n << BigInt(i));
             }
         }
-        encodedState |= (BigInt(boardHeight) << 50n);
-        encodedState |= (BigInt(boardWidth) << 53n);
+        //encodedState |= (BigInt(boardHeight) << 51n);
+        //encodedState |= (BigInt(boardWidth) << 54n);
         const currentPlayerBit = BigInt(moveCount % 2);
-        encodedState |= (currentPlayerBit << 56n);
+        encodedState |= (currentPlayerBit << 57n);
         const tokenPosition = BigInt(currentWhiteTokenIndex);
         encodedState |= (tokenPosition << 58n);
         return encodedState;
@@ -439,7 +440,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const dificuldade = 2 + (currentGameDifficulty - 1) * 5;
 
         try {
-            const aiMoveIndex = jogoModuleInstance._jogadaSite(encodedState, dificuldade);
+            const aiMoveIndex = jogoModuleInstance._jogadaSite(encodedState, dificuldade, boardHeight, boardWidth);
+            //alert(encodedState);
+            //const aiMoveIndex = jogoModuleInstance._jogadaSite(encodedState, dificuldade, 5, 5);
 
             const squareElement = getSquareElementByIndex(aiMoveIndex);
             if (squareElement && isMoveAdjacent(aiMoveIndex, currentWhiteTokenIndex) && !squareElement.classList.contains('occupied')) {
@@ -460,12 +463,12 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const encodedState = BigInt(encodedString.trim());
             const decodedTokenIndex = Number((encodedState >> 58n) & 0x3Fn);
-            const decodedPlayerBit = Number((encodedState >> 56n) & 1n);
-            const decodedWidth = Number((encodedState >> 53n) & 0x7n);
-            const decodedHeight = Number((encodedState >> 50n) & 0x7n);
+            const decodedPlayerBit = Number((encodedState >> 57n) & 1n);
+            const decodedWidth = boardWidth //((encodedState >> 54n) & 0x7n);
+            const decodedHeight = boardHeight //((encodedState >> 51n) & 0x7n);
 
-            if (decodedWidth < 4 || decodedWidth > 7 || decodedHeight < 4 || decodedHeight > 7) {
-                setMessage(`Erro: Dimensões decodificadas (${decodedWidth}x${decodedHeight}) estão fora do intervalo suportado (4-7).`, true);
+            if (decodedWidth * decodedHeight > 50) {
+                setMessage(`Erro: Dimensões descodificadas (${decodedWidth}x${decodedHeight}) estão fora do intervalo suportado.`, true);
                 return null;
             }
 
