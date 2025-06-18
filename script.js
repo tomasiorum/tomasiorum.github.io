@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentWhiteTokenIndex;
     let gameActive;
     let moveCount;
+    let isPlacingStartingPiece = false; // Novo estado para a colocação da peça inicial
 
     let movesTableBody;
     let jogoModuleInstance = null;
@@ -37,6 +38,31 @@ document.addEventListener('DOMContentLoaded', function() {
     let selectedGameMode = 'player1_vs_ai';
     let currentGameDifficulty = 1;
     let resultsData = {};
+
+    function initializeModal() {
+        const modal = document.getElementById("instructions-modal");
+        const btn = document.getElementById("instructions-button");
+        const span = document.getElementsByClassName("close-button")[0];
+
+        if (!modal || !btn || !span) {
+            console.error("Elementos do modal não encontrados!");
+            return;
+        }
+
+        btn.onclick = function() {
+            modal.style.display = "block";
+        }
+
+        span.onclick = function() {
+            modal.style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+    }
 
     // --- Gestão de Cookies e Resultados ---
 
@@ -195,6 +221,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     initializeDomElements();
+    initializeModal();
 
     const savedResults = getCookie("rastrosResults_v2");
     if (savedResults) {
@@ -215,6 +242,24 @@ document.addEventListener('DOMContentLoaded', function() {
         encodeGameStateToBigIntAndPlayAI();
     });
 
+    // Converte coordenadas (ex: a1, c4) para o índice do tabuleiro
+    function coordsToIndex(coords) {
+        if (!coords || coords.length < 2) return null;
+        const colChar = coords.charAt(0).toLowerCase();
+        const rowStr = coords.substring(1);
+
+        const col = colChar.charCodeAt(0) - 'a'.charCodeAt(0);
+        const rowNum = parseInt(rowStr, 10);
+
+        if (isNaN(rowNum) || col < 0 || col >= boardWidth || rowNum < 1 || rowNum > boardHeight) {
+            return null;
+        }
+
+        // Converte a linha do formato algébrico para o índice (base 0, a contar de cima)
+        const row = boardHeight - rowNum;
+        return row * boardWidth + col;
+    }
+
 
     // Event Listeners
     if (newGameButtonElement) {
@@ -224,7 +269,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const dims = sizeValue.split('x');
             boardWidth = parseInt(dims[0], 10);
             boardHeight = parseInt(dims[1], 10);
-            initGame();
+
+            updateGameConstants();
+
+            if (selectedGameMode === 'two_players') {
+                // Inicia o jogo em modo de configuração, sem a peça branca
+                initGame(false, true);
+                // Mostra a instrução para colocar a peça
+                setGameEndMessage("Colocar a peça branca em casa acordada entre os dois jogadores");
+            } else {
+                // Início normal para modos contra IA
+                initGame();
+            }
         });
     } else {
         console.error('Botão Novo Jogo não encontrado!');
@@ -293,16 +349,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateControlsBasedOnGameState() {
+        const isGameInProgress = gameActive || isPlacingStartingPiece;
         const isPlayable = gameActive && jogoModuleInstance;
+
         if (aiButton) aiButton.disabled = !isPlayable || selectedGameMode === 'two_players';
 
         if (movesTableElement) {
-            movesTableElement.classList.toggle('table-interaction-disabled', gameActive);
+            movesTableElement.classList.toggle('table-interaction-disabled', isGameInProgress);
         }
-        if (gameValueSlider) gameValueSlider.disabled = gameActive;
-        if (boardSizeSelect) boardSizeSelect.disabled = gameActive;
+        if (gameValueSlider) gameValueSlider.disabled = isGameInProgress;
+        if (boardSizeSelect) boardSizeSelect.disabled = isGameInProgress;
 
-        gameModeRadios.forEach(radio => { radio.disabled = gameActive; });
+        gameModeRadios.forEach(radio => { radio.disabled = isGameInProgress; });
     }
 
     function setGameEndMessage(message) {
@@ -625,9 +683,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleSquareClick(event) {
-        if (!gameActive) return;
         const clickedSquare = event.currentTarget;
         const clickedSquareIndex = parseInt(clickedSquare.dataset.squareNumber, 10);
+
+        if (isPlacingStartingPiece) {
+            // Lógica para a primeira jogada: colocar a peça branca
+            if (clickedSquareIndex === numberOneSquareIndex || clickedSquareIndex === numberTwoSquareIndex) {
+                alert("A casa de partida não pode ser uma das casas objetivo.");
+                return;
+            }
+
+            // Coloca a peça branca na casa clicada
+            const whiteToken = document.createElement('div');
+            whiteToken.classList.add('white-token');
+            clickedSquare.appendChild(whiteToken);
+
+            // Atualiza o estado do jogo
+            currentWhiteTokenIndex = clickedSquareIndex;
+            moveCount = 0;
+            gameActive = true; // O jogo começa agora
+            isPlacingStartingPiece = false; // Termina o modo de colocação
+
+            // Atualiza a interface
+            setGameEndMessage(''); // Limpa a mensagem de instrução
+            setMessage(`Novo jogo. Vez do Jogador ${ (moveCount % 2) + 1 }.`, false);
+            updateGoalHighlight();
+            updateControlsBasedOnGameState();
+            return; // A jogada de colocação termina aqui
+        }
+
+        // Lógica para as jogadas normais (depois da peça colocada)
+        if (!gameActive) return;
 
         if (!isMoveAdjacent(clickedSquareIndex, currentWhiteTokenIndex)) return;
         if (clickedSquare.classList.contains('occupied')) return;
@@ -685,19 +771,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function initGame(calledDuringDecode = false) {
+    function initGame(calledDuringDecode = false, isSetupMode = false) {
 
         if (!gameBoardElement || !gameTitleElement) {
             console.error("CRÍTICO: Elemento do tabuleiro ou título não encontrado durante init!");
             return;
         }
 
+        // Reseta os estados no início de cada jogo
+        gameActive = false;
+        isPlacingStartingPiece = false;
+
         updateGameConstants();
         updateBoardLabels();
 
         if (!calledDuringDecode) {
             if (gameEndMessageElement) gameEndMessageElement.textContent = '';
-            setMessage(`Novo jogo iniciado. Modo: ${selectedGameMode}, Dificuldade: ${currentGameDifficulty}. Vez do Jogador 1.`, false);
+            if (!isSetupMode) {
+                setMessage(`Novo jogo iniciado. Modo: ${selectedGameMode}, Dificuldade: ${currentGameDifficulty}. Vez do Jogador 1.`, false);
+            }
             if (encodedOutputDiv) encodedOutputDiv.textContent = '';
             if (decodeInputElement) decodeInputElement.value = '';
             if (movesTableBody) movesTableBody.innerHTML = '';
@@ -731,50 +823,55 @@ document.addEventListener('DOMContentLoaded', function() {
             if (i === numberOneSquareIndex) addNumberCircle(square, 1);
             else if (i === numberTwoSquareIndex) addNumberCircle(square, 2);
 
-            if (!calledDuringDecode) {
-                square.addEventListener('click', handleSquareClick);
-            }
+            // Adiciona o listener sempre, a lógica de qual ação tomar fica no handler
+            square.addEventListener('click', handleSquareClick);
+
             gameBoardElement.appendChild(square);
         }
 
         if (!calledDuringDecode) {
-            moveCount = 0;
-            currentWhiteTokenIndex = initialWhiteTokenIndex;
-            gameActive = true;
-
-            const startSquare = getSquareElementByIndex(initialWhiteTokenIndex);
-            if (startSquare) {
-                if (startSquare.querySelector('.number-circle')) startSquare.innerHTML = '';
-                const whiteToken = document.createElement('div');
-                whiteToken.classList.add('white-token');
-                startSquare.appendChild(whiteToken);
-                startSquare.classList.remove('occupied');
-            } else {
-                console.error("CRÍTICO: Não foi possível encontrar a casa inicial:", initialWhiteTokenIndex);
+            if (isSetupMode) {
+                // Modo de configuração para 2 jogadores
+                isPlacingStartingPiece = true;
                 gameActive = false;
-                setGameEndMessage("Erro: Não foi possível posicionar o token inicial.");
-                updateControlsBasedOnGameState();
-                return;
-            }
-
-            updateGoalHighlight();
-
-            if (!canPlayerMove(currentWhiteTokenIndex, 'init')) {
-                gameActive = false;
-                const winner = (moveCount % 2 === 0) ? 2 : 1;
-                setGameEndMessage(`Sem movimentos iniciais disponíveis! Jogador ${winner} ganha por defeito!`);
-                recordResult(winner);
-            }
-
-            updateControlsBasedOnGameState();
-
-            if (selectedGameMode === 'player2_vs_ai' && gameActive) {
-                setMessage(`Novo jogo. Vez do Jogador 1 (IA).`, false);
-                setTimeout(() => { encodeGameStateToBigIntAndPlayAI(); }, 100);
+                moveCount = 0;
             } else {
-                setMessage(`Novo jogo. Vez do Jogador ${ (moveCount % 2) + 1 }.`, false);
+                // Início de jogo normal (vs IA)
+                moveCount = 0;
+                currentWhiteTokenIndex = initialWhiteTokenIndex;
+                gameActive = true;
+
+                const startSquare = getSquareElementByIndex(initialWhiteTokenIndex);
+                if (startSquare) {
+                    if (startSquare.querySelector('.number-circle')) startSquare.innerHTML = '';
+                    const whiteToken = document.createElement('div');
+                    whiteToken.classList.add('white-token');
+                    startSquare.appendChild(whiteToken);
+                    startSquare.classList.remove('occupied');
+                } else {
+                    console.error("CRÍTICO: Não foi possível encontrar a casa inicial:", initialWhiteTokenIndex);
+                    gameActive = false;
+                    setGameEndMessage("Erro: Não foi possível posicionar o token inicial.");
+                }
+
+                updateGoalHighlight();
+
+                if (gameActive && !canPlayerMove(currentWhiteTokenIndex, 'init')) {
+                    gameActive = false;
+                    const winner = (moveCount % 2 === 0) ? 2 : 1;
+                    setGameEndMessage(`Sem movimentos iniciais disponíveis! Jogador ${winner} ganha por defeito!`);
+                    recordResult(winner);
+                }
+
+                if (selectedGameMode === 'player2_vs_ai' && gameActive) {
+                    setMessage(`Novo jogo. Vez do Jogador 1 (IA).`, false);
+                    setTimeout(() => { encodeGameStateToBigIntAndPlayAI(); }, 100);
+                } else if(gameActive) {
+                    setMessage(`Novo jogo. Vez do Jogador ${ (moveCount % 2) + 1 }.`, false);
+                }
             }
         }
+        updateControlsBasedOnGameState();
     }
 
     if (aiButton && encodedOutputDiv) {

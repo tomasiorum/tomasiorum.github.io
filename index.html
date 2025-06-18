@@ -9,7 +9,7 @@
 </head>
 <body>
 
-<h1 id="game-title">Rastros</h1>
+<h1 id="game-title">Rastros <span id="instructions-button">i</span></h1>
 <div id="game-end-message" style="margin-top: 20px; text-align: center; font-size: 1.2em; font-weight: bold; color: blue;"></div>
 
 <div id="game-settings-container" style="display: flex; flex-wrap: wrap; justify-content: space-around; align-items: flex-start; gap: 10px; margin-top: 20px; margin-bottom: 10px;">
@@ -119,10 +119,46 @@
 <div id="advanced-controls" style="text-align: center; margin-top:20px; display: none;">
   <button id="encode-button">Codificar Estado & Jogada IA (Depuração)</button>
   <div id="encoded-output" style="margin-top:5px; word-break: break-all;"></div>
-  <input type="text" id="decode-input" placeholder="Cole o estado codificado para carregar" style="margin-top:5px; width: 80%;">
+  <label for="decode-input"></label><input type="text" id="decode-input" placeholder="Cole o estado codificado para carregar" style="margin-top:5px; width: 80%;">
   <button id="decode-button" style="margin-top:5px;">Carregar Estado</button>
   <div id="decode-message" style="margin-top:5px;"></div>
 </div>
+
+<div id="instructions-modal" class="modal">
+  <div class="modal-content">
+    <span class="close-button">&times;</span>
+    <h2>Instruções do Jogo Rastros</h2>
+
+    <h3>Regras Básicas</h3>
+    <ul>
+      <li><strong>Objetivo:</strong> Levar a peça branca até à casa-objetivo do adversário. O Jogador 1 vence se chegar à casa marcada com "1" (canto inferior esquerdo), e o Jogador 2 vence se chegar à casa marcada com "2" (canto superior direito).</li>
+      <li><strong>Movimento:</strong> Na sua vez, cada jogador move a peça branca para uma casa adjacente (na horizontal, vertical ou diagonal) que não esteja ocupada.</li>
+      <li><strong>Rastros:</strong> A casa que a peça branca acaba de desocupar torna-se uma casa preta, ou "rastro", e não pode ser usada novamente durante o jogo.</li>
+      <li><strong>Como Vencer:</strong> Um jogador vence de duas formas:
+        <ol>
+          <li>Alcançando a sua casa-objetivo.</li>
+          <li>Encurralando o adversário, deixando-o sem movimentos válidos possíveis.</li>
+        </ol>
+      </li>
+    </ul>
+
+    <h3>Funcionalidades do Programa</h3>
+    <ul>
+      <li><strong>Modos de Jogo:</strong> Pode escolher entre três modos:
+        <ul>
+          <li><strong>Jogador 1 vs IA:</strong> Joga como Jogador 1 contra o computador.</li>
+          <li><strong>IA vs Jogador 2:</strong> O computador joga primeiro, e você assume o papel de Jogador 2.</li>
+          <li><strong>2 Jogadores:</strong> Um modo para dois jogadores humanos. O jogo começa com o tabuleiro vazio, e o primeiro jogador clica na casa onde deseja iniciar a partida.</li>
+        </ul>
+      </li>
+      <li><strong>Nível de Dificuldade:</strong> Um seletor de nível (de 1 a 10) permite ajustar a força da inteligência artificial. Níveis mais altos significam que a IA calculará mais jogadas à frente.</li>
+      <li><strong>Ajuda da IA:</strong> Mesmo quando é a sua vez de jogar, pode usar o botão <strong>"Fazer jogada IA"</strong>. Isto fará com que a IA execute a melhor jogada que encontrou para a sua posição atual, servindo como uma ajuda ou sugestão.</li>
+      <li><strong>Histórico de Jogadas:</strong> A tabela à direita mostra um registo de todas as jogadas da partida. Clicar numa jogada específica no histórico permite visualizar o estado do tabuleiro naquele momento. Para voltar a jogar, deve iniciar um novo jogo.</li>
+      <li><strong>Resultados vs IA:</strong> Na parte inferior, uma tabela regista automaticamente o seu histórico de vitórias e derrotas contra a IA, organizado por tamanho do tabuleiro e nível de dificuldade.</li>
+    </ul>
+  </div>
+</div>
+
 <iframe
         id="footer-iframe"
         src="https://danieloliveira1802875.github.io/cnjm-footer/"
