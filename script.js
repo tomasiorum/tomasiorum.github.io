@@ -243,25 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Converte coordenadas (ex: a1, c4) para o índice do tabuleiro
-    function coordsToIndex(coords) {
-        if (!coords || coords.length < 2) return null;
-        const colChar = coords.charAt(0).toLowerCase();
-        const rowStr = coords.substring(1);
-
-        const col = colChar.charCodeAt(0) - 'a'.charCodeAt(0);
-        const rowNum = parseInt(rowStr, 10);
-
-        if (isNaN(rowNum) || col < 0 || col >= boardWidth || rowNum < 1 || rowNum > boardHeight) {
-            return null;
-        }
-
-        // Converte a linha do formato algébrico para o índice (base 0, a contar de cima)
-        const row = boardHeight - rowNum;
-        return row * boardWidth + col;
-    }
-
-
-    // Event Listeners
+// Event Listeners
     if (newGameButtonElement) {
         newGameButtonElement.addEventListener('click', () => {
             currentGameDifficulty = parseInt(gameValueSlider.value, 10);
@@ -322,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateGameConstants() {
         totalSquares = boardWidth * boardHeight;
         numberOneSquareIndex = (boardHeight - 1) * boardWidth;
-        numberTwoSquareIndex = (0 * boardWidth) + (boardWidth - 1);
+        numberTwoSquareIndex = (0) + (boardWidth - 1);
 
         if (boardWidth === 7 && boardHeight === 7) {
             initialWhiteTokenIndex = 18;
@@ -422,7 +404,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return false;
     }
 
-    function canPlayerMove(currentIndex, context = "move") {
+    function canPlayerMove(currentIndex) {
         for (let r_offset = -1; r_offset <= 1; r_offset++) {
             for (let c_offset = -1; c_offset <= 1; c_offset++) {
                 if (r_offset === 0 && c_offset === 0) continue;
@@ -490,9 +472,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const currentPlayer = (moveCount % 2) + 1;
-        let isAITurn = false;
-        if (selectedGameMode === 'player1_vs_ai' && currentPlayer === 2) isAITurn = true;
-        else if (selectedGameMode === 'player2_vs_ai' && currentPlayer === 1) isAITurn = true;
+        //let isAITurn = false;
+        //if (selectedGameMode === 'player1_vs_ai' && currentPlayer === 2) isAITurn = true;
+        //else if (selectedGameMode === 'player2_vs_ai' && currentPlayer === 1) isAITurn = true;
 
         const encodedState = encodeCurrentStateOnly();
         const dificuldade = 2 + (currentGameDifficulty - 1) * 5;
@@ -616,7 +598,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let loadedStateInfo = `Exibindo estado: Tabuleiro ${boardWidth}x${boardHeight}. Vez do Jogador ${state.moveCountParity + 1}. `;
         if (state.tokenIndex === numberOneSquareIndex) loadedStateInfo += "Este era um estado de vitória para o Jogador 1. ";
         else if (state.tokenIndex === numberTwoSquareIndex) loadedStateInfo += "Este era um estado de vitória para o Jogador 2. ";
-        else if (!canPlayerMove(state.tokenIndex, 'load_check')) {
+        else if (!canPlayerMove(state.tokenIndex)) {
             const losingPlayer = state.moveCountParity + 1;
             const winningPlayer = losingPlayer === 1 ? 2 : 1;
             loadedStateInfo += `Jogador ${losingPlayer} não tinha movimentos disponíveis neste estado (Jogador ${winningPlayer} ganharia). `;
@@ -856,7 +838,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 updateGoalHighlight();
 
-                if (gameActive && !canPlayerMove(currentWhiteTokenIndex, 'init')) {
+                if (gameActive && !canPlayerMove(currentWhiteTokenIndex)) {
                     gameActive = false;
                     const winner = (moveCount % 2 === 0) ? 2 : 1;
                     setGameEndMessage(`Sem movimentos iniciais disponíveis! Jogador ${winner} ganha por defeito!`);
