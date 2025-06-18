@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentWhiteTokenIndex;
     let gameActive;
     let moveCount;
+    let isPlacingStartingPiece = false; // Novo estado para a colocação da peça inicial
 
     let movesTableBody;
     let jogoModuleInstance = null;
@@ -29,12 +30,163 @@ document.addEventListener('DOMContentLoaded', function() {
     let gameValueSlider;
     let currentSliderValueDisplay;
     let gameModeRadios;
-    let boardWidthSelect, boardHeightSelect;
+    let boardSizeSelect;
     let movesAreaElement;
     let jogadaIAButtonElement;
+    let resultsTableBody;
 
     let selectedGameMode = 'player1_vs_ai';
     let currentGameDifficulty = 1;
+    let resultsData = {};
+
+    function initializeModal() {
+        const modal = document.getElementById("instructions-modal");
+        const btn = document.getElementById("instructions-button");
+        const span = document.getElementsByClassName("close-button")[0];
+
+        if (!modal || !btn || !span) {
+            console.error("Elementos do modal não encontrados!");
+            return;
+        }
+
+        btn.onclick = function() {
+            modal.style.display = "block";
+        }
+
+        span.onclick = function() {
+            modal.style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+    }
+
+    // --- Gestão de Cookies e Resultados ---
+
+    function setCookie(name, value, days) {
+        let expires = "";
+        if (days) {
+            let date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
+    }
+
+    function getCookie(name) {
+        let nameEQ = name + "=";
+        let ca = document.cookie.split(';');
+        for (let i = 0; i < ca.length; i++) {
+            let c = ca[i];
+            while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+        }
+        return null;
+    }
+
+    function renderResultsTable() {
+        if (!resultsTableBody) return;
+        resultsTableBody.innerHTML = '';
+
+        const sortedBoardSizes = Object.keys(resultsData).sort((a, b) => {
+            const [aW, aH] = a.split('x').map(Number);
+            const [bW, bH] = b.split('x').map(Number);
+            if (aW !== bW) return aW - bW;
+            return aH - bH;
+        });
+
+        for (const boardSize of sortedBoardSizes) {
+            const row = resultsTableBody.insertRow();
+            row.insertCell(0).textContent = boardSize;
+            const sizeData = resultsData[boardSize];
+
+            for (let i = 1; i <= 10; i++) {
+                const cell = row.insertCell(i);
+                const difficultyKey = i.toString();
+                const difficultyData = sizeData[difficultyKey] || {
+                    asPlayer1: { wins: 0, losses: 0 },
+                    asPlayer2: { wins: 0, losses: 0 }
+                };
+
+                const p1Stats = difficultyData.asPlayer1;
+                const p2Stats = difficultyData.asPlayer2;
+
+                cell.innerHTML =
+                    `<span class="result-line">1: ${p1Stats.wins}/${p1Stats.losses}</span>` +
+                    `<span class="result-line">2: ${p2Stats.wins}/${p2Stats.losses}</span>`;
+            }
+        }
+    }
+
+    function recordResult(winner) {
+        if (selectedGameMode === 'two_players') return;
+
+        const boardSizeKey = `${boardWidth}x${boardHeight}`;
+        const difficultyKey = currentGameDifficulty.toString();
+
+        if (!resultsData[boardSizeKey]) {
+            resultsData[boardSizeKey] = {};
+        }
+        if (!resultsData[boardSizeKey][difficultyKey]) {
+            resultsData[boardSizeKey][difficultyKey] = {
+                asPlayer1: { wins: 0, losses: 0 },
+                asPlayer2: { wins: 0, losses: 0 }
+            };
+        }
+
+        const stats = resultsData[boardSizeKey][difficultyKey];
+
+        if (selectedGameMode === 'player1_vs_ai') {
+            if (winner === 1) {
+                stats.asPlayer1.wins++;
+            } else {
+                stats.asPlayer1.losses++;
+            }
+        } else if (selectedGameMode === 'player2_vs_ai') {
+            if (winner === 2) {
+                stats.asPlayer2.wins++;
+            } else {
+                stats.asPlayer2.losses++;
+            }
+        }
+
+        setCookie("rastrosResults_v2", JSON.stringify(resultsData), 365);
+        renderResultsTable();
+    }
+
+
+    // Lógica para desativar modos de IA para tabuleiros > 7x7
+    function updateAiSupport(width, height) {
+        let w = width;
+        let h = height;
+
+        if (w === undefined || h === undefined) {
+            if (!boardSizeSelect || boardSizeSelect.value === 'custom') return;
+            const dims = boardSizeSelect.value.split('x');
+            w = parseInt(dims[0], 10);
+            h = parseInt(dims[1], 10);
+        }
+
+        const isAiSupported = w <= 10 && h <= 10;
+
+        const p1VsAiRadio = document.getElementById('player1_vs_ai');
+        const p2VsAiRadio = document.getElementById('player2_vs_ai');
+        const twoPlayersRadio = document.getElementById('two_players');
+
+        if (p1VsAiRadio) p1VsAiRadio.disabled = !isAiSupported;
+        if (p2VsAiRadio) p2VsAiRadio.disabled = !isAiSupported;
+
+        if (!isAiSupported && (p1VsAiRadio.checked || p2VsAiRadio.checked)) {
+            if (twoPlayersRadio) {
+                twoPlayersRadio.checked = true;
+                selectedGameMode = 'two_players';
+            }
+        }
+    }
+
 
     // Inicializar elementos DOM
     function initializeDomElements() {
@@ -60,28 +212,57 @@ document.addEventListener('DOMContentLoaded', function() {
         currentSliderValueDisplay = document.getElementById('current-slider-value');
         gameModeRadios = document.querySelectorAll('input[name="game_mode"]');
 
-        boardWidthSelect = document.getElementById('board-width-select');
-        boardHeightSelect = document.getElementById('board-height-select');
+        boardSizeSelect = document.getElementById('board-size-select');
+        if (boardSizeSelect) {
+            boardSizeSelect.addEventListener('change', () => updateAiSupport());
+        }
+
+        resultsTableBody = document.getElementById('results-table')?.getElementsByTagName('tbody')[0];
     }
 
     initializeDomElements();
+    initializeModal();
+
+    const savedResults = getCookie("rastrosResults_v2");
+    if (savedResults) {
+        try {
+            resultsData = JSON.parse(savedResults);
+        } catch (e) {
+            console.error("Could not parse results cookie:", e);
+            resultsData = {};
+        }
+    }
+    renderResultsTable();
+
+
+    updateAiSupport(); // Correr a verificação inicial no carregamento
+
 
     jogadaIAButtonElement.addEventListener('click', () => {
         encodeGameStateToBigIntAndPlayAI();
     });
 
-
-    // Event Listeners
+    // Converte coordenadas (ex: a1, c4) para o índice do tabuleiro
+// Event Listeners
     if (newGameButtonElement) {
         newGameButtonElement.addEventListener('click', () => {
             currentGameDifficulty = parseInt(gameValueSlider.value, 10);
-            boardWidth = parseInt(boardWidthSelect.value, 10);
-            boardHeight = parseInt(boardHeightSelect.value, 10);
-            // console.log("A iniciar Novo Jogo com:");
-            // console.log(`  Dimensões: ${boardWidth}x${boardHeight}`);
-            // console.log("  Dificuldade:", currentGameDifficulty);
-            // console.log("  Modo de Jogo:", selectedGameMode);
-            initGame();
+            const sizeValue = boardSizeSelect.value;
+            const dims = sizeValue.split('x');
+            boardWidth = parseInt(dims[0], 10);
+            boardHeight = parseInt(dims[1], 10);
+
+            updateGameConstants();
+
+            if (selectedGameMode === 'two_players') {
+                // Inicia o jogo em modo de configuração, sem a peça branca
+                initGame(false, true);
+                // Mostra a instrução para colocar a peça
+                setGameEndMessage("Colocar a peça branca em casa acordada entre os dois jogadores");
+            } else {
+                // Início normal para modos contra IA
+                initGame();
+            }
         });
     } else {
         console.error('Botão Novo Jogo não encontrado!');
@@ -90,6 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (gameValueSlider && currentSliderValueDisplay) {
         gameValueSlider.addEventListener('input', () => {
             currentSliderValueDisplay.textContent = gameValueSlider.value;
+            currentGameDifficulty = parseInt(gameValueSlider.value, 10);
         });
     }
 
@@ -105,7 +287,6 @@ document.addEventListener('DOMContentLoaded', function() {
         createJogoModule()
             .then(instance => {
                 jogoModuleInstance = instance;
-                // console.log("Módulo Jogo Wasm Inicializado!");
                 if (messageOutput) messageOutput.textContent = "Módulo Wasm carregado.";
                 updateControlsBasedOnGameState();
             })
@@ -123,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateGameConstants() {
         totalSquares = boardWidth * boardHeight;
         numberOneSquareIndex = (boardHeight - 1) * boardWidth;
-        numberTwoSquareIndex = (0 * boardWidth) + (boardWidth - 1);
+        numberTwoSquareIndex = (0) + (boardWidth - 1);
 
         if (boardWidth === 7 && boardHeight === 7) {
             initialWhiteTokenIndex = 18;
@@ -150,17 +331,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateControlsBasedOnGameState() {
+        const isGameInProgress = gameActive || isPlacingStartingPiece;
         const isPlayable = gameActive && jogoModuleInstance;
+
         if (aiButton) aiButton.disabled = !isPlayable || selectedGameMode === 'two_players';
 
         if (movesTableElement) {
-            movesTableElement.classList.toggle('table-interaction-disabled', gameActive);
+            movesTableElement.classList.toggle('table-interaction-disabled', isGameInProgress);
         }
-        if (gameValueSlider) gameValueSlider.disabled = gameActive;
-        if (boardWidthSelect) boardWidthSelect.disabled = gameActive;
-        if (boardHeightSelect) boardHeightSelect.disabled = gameActive;
+        if (gameValueSlider) gameValueSlider.disabled = isGameInProgress;
+        if (boardSizeSelect) boardSizeSelect.disabled = isGameInProgress;
 
-        gameModeRadios.forEach(radio => { radio.disabled = gameActive; });
+        gameModeRadios.forEach(radio => { radio.disabled = isGameInProgress; });
     }
 
     function setGameEndMessage(message) {
@@ -215,13 +397,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (winner !== null) {
             gameActive = false;
             setGameEndMessage(`Jogador ${winner} ganhou!`);
+            recordResult(winner);
             updateControlsBasedOnGameState();
             return true;
         }
         return false;
     }
 
-    function canPlayerMove(currentIndex, context = "move") {
+    function canPlayerMove(currentIndex) {
         for (let r_offset = -1; r_offset <= 1; r_offset++) {
             for (let c_offset = -1; c_offset <= 1; c_offset++) {
                 if (r_offset === 0 && c_offset === 0) continue;
@@ -269,10 +452,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 encodedState |= (1n << BigInt(i));
             }
         }
-        encodedState |= (BigInt(boardHeight) << 50n);
-        encodedState |= (BigInt(boardWidth) << 53n);
+        //encodedState |= (BigInt(boardHeight) << 51n);
+        //encodedState |= (BigInt(boardWidth) << 54n);
         const currentPlayerBit = BigInt(moveCount % 2);
-        encodedState |= (currentPlayerBit << 56n);
+        encodedState |= (currentPlayerBit << 57n);
         const tokenPosition = BigInt(currentWhiteTokenIndex);
         encodedState |= (tokenPosition << 58n);
         return encodedState;
@@ -289,20 +472,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const currentPlayer = (moveCount % 2) + 1;
-        let isAITurn = false;
-        if (selectedGameMode === 'player1_vs_ai' && currentPlayer === 2) isAITurn = true;
-        else if (selectedGameMode === 'player2_vs_ai' && currentPlayer === 1) isAITurn = true;
-
-        /*if (!isAITurn) {
-            setMessage("Não é a vez da IA jogar neste modo ou turno.", true);
-            return null;
-        }*/
+        //let isAITurn = false;
+        //if (selectedGameMode === 'player1_vs_ai' && currentPlayer === 2) isAITurn = true;
+        //else if (selectedGameMode === 'player2_vs_ai' && currentPlayer === 1) isAITurn = true;
 
         const encodedState = encodeCurrentStateOnly();
         const dificuldade = 2 + (currentGameDifficulty - 1) * 5;
 
         try {
-            const aiMoveIndex = jogoModuleInstance._jogadaSite(encodedState, dificuldade);
+            const aiMoveIndex = jogoModuleInstance._jogadaSite(encodedState, dificuldade, boardHeight, boardWidth);
+            //alert(encodedState);
+            //const aiMoveIndex = jogoModuleInstance._jogadaSite(encodedState, dificuldade, 5, 5);
 
             const squareElement = getSquareElementByIndex(aiMoveIndex);
             if (squareElement && isMoveAdjacent(aiMoveIndex, currentWhiteTokenIndex) && !squareElement.classList.contains('occupied')) {
@@ -323,12 +503,12 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const encodedState = BigInt(encodedString.trim());
             const decodedTokenIndex = Number((encodedState >> 58n) & 0x3Fn);
-            const decodedPlayerBit = Number((encodedState >> 56n) & 1n);
-            const decodedWidth = Number((encodedState >> 53n) & 0x7n);
-            const decodedHeight = Number((encodedState >> 50n) & 0x7n);
+            const decodedPlayerBit = Number((encodedState >> 57n) & 1n);
+            const decodedWidth = boardWidth //((encodedState >> 54n) & 0x7n);
+            const decodedHeight = boardHeight //((encodedState >> 51n) & 0x7n);
 
-            if (decodedWidth < 4 || decodedWidth > 7 || decodedHeight < 4 || decodedHeight > 7) {
-                setMessage(`Erro: Dimensões decodificadas (${decodedWidth}x${decodedHeight}) estão fora do intervalo suportado (4-7).`, true);
+            if (decodedWidth * decodedHeight > 50) {
+                setMessage(`Erro: Dimensões descodificadas (${decodedWidth}x${decodedHeight}) estão fora do intervalo suportado.`, true);
                 return null;
             }
 
@@ -366,8 +546,16 @@ document.addEventListener('DOMContentLoaded', function() {
         boardWidth = state.width;
         boardHeight = state.height;
 
-        if (boardWidthSelect) boardWidthSelect.value = boardWidth;
-        if (boardHeightSelect) boardHeightSelect.value = boardHeight;
+        if (boardSizeSelect) {
+            const sizeString = `${boardWidth}x${boardHeight}`;
+            const matchingOption = Array.from(boardSizeSelect.options).find(o => o.value === sizeString);
+            if (matchingOption) {
+                boardSizeSelect.value = sizeString;
+            } else {
+                boardSizeSelect.value = 'custom';
+            }
+            updateAiSupport(boardWidth, boardHeight);
+        }
 
         initGame(true);
 
@@ -410,7 +598,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let loadedStateInfo = `Exibindo estado: Tabuleiro ${boardWidth}x${boardHeight}. Vez do Jogador ${state.moveCountParity + 1}. `;
         if (state.tokenIndex === numberOneSquareIndex) loadedStateInfo += "Este era um estado de vitória para o Jogador 1. ";
         else if (state.tokenIndex === numberTwoSquareIndex) loadedStateInfo += "Este era um estado de vitória para o Jogador 2. ";
-        else if (!canPlayerMove(state.tokenIndex, 'load_check')) {
+        else if (!canPlayerMove(state.tokenIndex)) {
             const losingPlayer = state.moveCountParity + 1;
             const winningPlayer = losingPlayer === 1 ? 2 : 1;
             loadedStateInfo += `Jogador ${losingPlayer} não tinha movimentos disponíveis neste estado (Jogador ${winningPlayer} ganharia). `;
@@ -477,9 +665,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleSquareClick(event) {
-        if (!gameActive) return;
         const clickedSquare = event.currentTarget;
         const clickedSquareIndex = parseInt(clickedSquare.dataset.squareNumber, 10);
+
+        if (isPlacingStartingPiece) {
+            // Lógica para a primeira jogada: colocar a peça branca
+            if (clickedSquareIndex === numberOneSquareIndex || clickedSquareIndex === numberTwoSquareIndex) {
+                alert("A casa de partida não pode ser uma das casas objetivo.");
+                return;
+            }
+
+            // Coloca a peça branca na casa clicada
+            const whiteToken = document.createElement('div');
+            whiteToken.classList.add('white-token');
+            clickedSquare.appendChild(whiteToken);
+
+            // Atualiza o estado do jogo
+            currentWhiteTokenIndex = clickedSquareIndex;
+            moveCount = 0;
+            gameActive = true; // O jogo começa agora
+            isPlacingStartingPiece = false; // Termina o modo de colocação
+
+            // Atualiza a interface
+            setGameEndMessage(''); // Limpa a mensagem de instrução
+            setMessage(`Novo jogo. Vez do Jogador ${ (moveCount % 2) + 1 }.`, false);
+            updateGoalHighlight();
+            updateControlsBasedOnGameState();
+            return; // A jogada de colocação termina aqui
+        }
+
+        // Lógica para as jogadas normais (depois da peça colocada)
+        if (!gameActive) return;
 
         if (!isMoveAdjacent(clickedSquareIndex, currentWhiteTokenIndex)) return;
         if (clickedSquare.classList.contains('occupied')) return;
@@ -518,7 +734,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!canPlayerMove(currentWhiteTokenIndex)) {
             gameActive = false;
-            setGameEndMessage(`Encurralado! O jogador ${playerMakingTheMove} ganha!`);
+            const winner = playerMakingTheMove;
+            setGameEndMessage(`Encurralado! O jogador ${winner} ganha!`);
+            recordResult(winner);
             updateControlsBasedOnGameState();
             return;
         }
@@ -535,23 +753,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function initGame(calledDuringDecode = false) {
-        // console.log(`DEBUG: initGame START. calledDuringDecode: ${calledDuringDecode}`);
-        // console.log(`DEBUG: initGame - Globals: boardWidth=${boardWidth}, boardHeight=${boardHeight}`);
+    function initGame(calledDuringDecode = false, isSetupMode = false) {
 
         if (!gameBoardElement || !gameTitleElement) {
             console.error("CRÍTICO: Elemento do tabuleiro ou título não encontrado durante init!");
             return;
         }
 
+        // Reseta os estados no início de cada jogo
+        gameActive = false;
+        isPlacingStartingPiece = false;
+
         updateGameConstants();
         updateBoardLabels();
-        // console.log(`DEBUG: initGame - After updateGameConstants: totalSquares=${totalSquares}`);
-        gameTitleElement.textContent = `Rastros ${boardWidth}x${boardHeight}`;
 
         if (!calledDuringDecode) {
             if (gameEndMessageElement) gameEndMessageElement.textContent = '';
-            setMessage(`Novo jogo iniciado. Modo: ${selectedGameMode}, Dificuldade: ${currentGameDifficulty}. Vez do Jogador 1.`, false);
+            if (!isSetupMode) {
+                setMessage(`Novo jogo iniciado. Modo: ${selectedGameMode}, Dificuldade: ${currentGameDifficulty}. Vez do Jogador 1.`, false);
+            }
             if (encodedOutputDiv) encodedOutputDiv.textContent = '';
             if (decodeInputElement) decodeInputElement.value = '';
             if (movesTableBody) movesTableBody.innerHTML = '';
@@ -560,35 +780,22 @@ document.addEventListener('DOMContentLoaded', function() {
         gameBoardElement.innerHTML = '';
         gameBoardElement.style.gridTemplateColumns = `repeat(${boardWidth}, 1fr)`;
         gameBoardElement.style.gridTemplateRows = `repeat(${boardHeight}, 1fr)`;
-        // console.log(`DEBUG: initGame - Grid templates set for ${boardWidth}x${boardHeight}`);
 
-        // --- LÓGICA DE DIMENSIONAMENTO MODIFICADA ---
-        const TARGET_BOARD_WIDTH_PX = 350; // Largura alvo para o tabuleiro, como era antes
+        const TARGET_BOARD_WIDTH_PX = 350;
         gameBoardElement.style.width = `${TARGET_BOARD_WIDTH_PX}px`;
-        // console.log(`DEBUG: initGame - Largura do tabuleiro definida para: ${TARGET_BOARD_WIDTH_PX}px`);
 
-        // Medir a largura renderizada real após definir gameBoardElement.style.width
-        // Isto é importante porque o viewport pode ser menor que TARGET_BOARD_WIDTH_PX
         const currentBoardRenderedWidth = gameBoardElement.offsetWidth;
-        // console.log(`DEBUG: initGame - Largura renderizada real do tabuleiro (offsetWidth): ${currentBoardRenderedWidth}px`);
-
 
         if (boardWidth > 0) {
-            const cellWidth = currentBoardRenderedWidth / boardWidth; // Usar a largura renderizada
+            const cellWidth = currentBoardRenderedWidth / boardWidth;
             const newBoardHeight = cellWidth * boardHeight;
             gameBoardElement.style.height = `${newBoardHeight}px`;
 
-            // console.log(`DEBUG: initGame - CellWidth: ${cellWidth}px, newBoardHeight Calculada: ${newBoardHeight}px`);
-            if(movesAreaElement) movesAreaElement.style.maxHeight = `${newBoardHeight + 30 + 5}px`; // 30 para rótulos de col, 5 para gap
+            if(movesAreaElement) movesAreaElement.style.maxHeight = `${newBoardHeight + 30 + 5}px`;
         } else {
-            // console.warn("boardWidth não é positivo, não é possível calcular as dimensões do tabuleiro corretamente. boardWidth:", boardWidth);
-            gameBoardElement.style.height = `${TARGET_BOARD_WIDTH_PX}px`; // Fallback para quadrado
-            // console.log(`DEBUG: initGame - Altura do tabuleiro de fallback (quadrado): ${TARGET_BOARD_WIDTH_PX}px`);
+            gameBoardElement.style.height = `${TARGET_BOARD_WIDTH_PX}px`;
         }
-        // console.log(`DEBUG: initGame - gameBoardElement.style.height final: ${gameBoardElement.style.height}`);
-        // --- FIM DA LÓGICA DE DIMENSIONAMENTO MODIFICADA ---
 
-        // console.log(`DEBUG: initGame - A iniciar loop para criar ${totalSquares} casas.`);
         for (let i = 0; i < totalSquares; i++) {
             const square = document.createElement('div');
             square.classList.add('square');
@@ -598,51 +805,55 @@ document.addEventListener('DOMContentLoaded', function() {
             if (i === numberOneSquareIndex) addNumberCircle(square, 1);
             else if (i === numberTwoSquareIndex) addNumberCircle(square, 2);
 
-            if (!calledDuringDecode) {
-                square.addEventListener('click', handleSquareClick);
-            }
+            // Adiciona o listener sempre, a lógica de qual ação tomar fica no handler
+            square.addEventListener('click', handleSquareClick);
+
             gameBoardElement.appendChild(square);
         }
-        // console.log(`DEBUG: initGame - Criação de casas concluída.`);
 
         if (!calledDuringDecode) {
-            moveCount = 0;
-            currentWhiteTokenIndex = initialWhiteTokenIndex;
-            gameActive = true;
-
-            const startSquare = getSquareElementByIndex(initialWhiteTokenIndex);
-            if (startSquare) {
-                if (startSquare.querySelector('.number-circle')) startSquare.innerHTML = '';
-                const whiteToken = document.createElement('div');
-                whiteToken.classList.add('white-token');
-                startSquare.appendChild(whiteToken);
-                startSquare.classList.remove('occupied');
-            } else {
-                console.error("CRÍTICO: Não foi possível encontrar a casa inicial:", initialWhiteTokenIndex);
+            if (isSetupMode) {
+                // Modo de configuração para 2 jogadores
+                isPlacingStartingPiece = true;
                 gameActive = false;
-                setGameEndMessage("Erro: Não foi possível posicionar o token inicial.");
-                updateControlsBasedOnGameState();
-                return;
-            }
-
-            updateGoalHighlight();
-
-            if (!canPlayerMove(currentWhiteTokenIndex, 'init')) {
-                gameActive = false;
-                const winner = (moveCount % 2 === 0) ? 2 : 1;
-                setGameEndMessage(`Sem movimentos iniciais disponíveis! Jogador ${winner} ganha por defeito!`);
-            }
-
-            updateControlsBasedOnGameState();
-
-            if (selectedGameMode === 'player2_vs_ai' && gameActive) {
-                setMessage(`Novo jogo. Vez do Jogador 1 (IA).`, false);
-                setTimeout(() => { encodeGameStateToBigIntAndPlayAI(); }, 100);
+                moveCount = 0;
             } else {
-                setMessage(`Novo jogo. Vez do Jogador ${ (moveCount % 2) + 1 }.`, false);
+                // Início de jogo normal (vs IA)
+                moveCount = 0;
+                currentWhiteTokenIndex = initialWhiteTokenIndex;
+                gameActive = true;
+
+                const startSquare = getSquareElementByIndex(initialWhiteTokenIndex);
+                if (startSquare) {
+                    if (startSquare.querySelector('.number-circle')) startSquare.innerHTML = '';
+                    const whiteToken = document.createElement('div');
+                    whiteToken.classList.add('white-token');
+                    startSquare.appendChild(whiteToken);
+                    startSquare.classList.remove('occupied');
+                } else {
+                    console.error("CRÍTICO: Não foi possível encontrar a casa inicial:", initialWhiteTokenIndex);
+                    gameActive = false;
+                    setGameEndMessage("Erro: Não foi possível posicionar o token inicial.");
+                }
+
+                updateGoalHighlight();
+
+                if (gameActive && !canPlayerMove(currentWhiteTokenIndex)) {
+                    gameActive = false;
+                    const winner = (moveCount % 2 === 0) ? 2 : 1;
+                    setGameEndMessage(`Sem movimentos iniciais disponíveis! Jogador ${winner} ganha por defeito!`);
+                    recordResult(winner);
+                }
+
+                if (selectedGameMode === 'player2_vs_ai' && gameActive) {
+                    setMessage(`Novo jogo. Vez do Jogador 1 (IA).`, false);
+                    setTimeout(() => { encodeGameStateToBigIntAndPlayAI(); }, 100);
+                } else if(gameActive) {
+                    setMessage(`Novo jogo. Vez do Jogador ${ (moveCount % 2) + 1 }.`, false);
+                }
             }
         }
-        // console.log(`DEBUG: initGame FIM.`);
+        updateControlsBasedOnGameState();
     }
 
     if (aiButton && encodedOutputDiv) {
@@ -673,16 +884,34 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    boardWidth = parseInt(boardWidthSelect.value, 10);
-    boardHeight = parseInt(boardHeightSelect.value, 10);
+    currentGameDifficulty = parseInt(gameValueSlider.value, 10);
+    const initialSize = boardSizeSelect.value.split('x');
+    boardWidth = parseInt(initialSize[0], 10);
+    boardHeight = parseInt(initialSize[1], 10);
 
     requestAnimationFrame(() => {
-        // console.log("DEBUG: requestAnimationFrame callback - A chamar initGame(true)");
         initGame(true);
         gameActive = false;
         updateControlsBasedOnGameState();
         setGameEndMessage("Clique em 'Iniciar Novo Jogo' para começar.");
         if (gameEndMessageElement) gameEndMessageElement.style.color = 'initial';
     });
+    const clearResultsButton = document.getElementById('clear-results-button');
+    if (clearResultsButton) {
+        clearResultsButton.addEventListener('click', () => {
+            const userConfirmed = window.confirm("Esta ação apaga o registo de todos os resultados. Tem a certeza?");
+            if (userConfirmed) {
+                // Limpa os dados em memória
+                resultsData = {};
 
-}); // Fim do listener DOMContentLoaded
+                // Apaga o cookie dos resultados
+                setCookie("rastrosResults_v2", "", -1);
+
+                // Atualiza a tabela para a mostrar vazia
+                renderResultsTable();
+
+                console.log("Os resultados foram limpos.");
+            }
+        });
+    }
+});

@@ -9,29 +9,28 @@
 </head>
 <body>
 
-<h1 id="game-title">Rastros 7x7</h1>
+<h1 id="game-title">Rastros <span id="instructions-button">i</span></h1>
 <div id="game-end-message" style="margin-top: 20px; text-align: center; font-size: 1.2em; font-weight: bold; color: blue;"></div>
 
 <div id="game-settings-container" style="display: flex; flex-wrap: wrap; justify-content: space-around; align-items: flex-start; gap: 10px; margin-top: 20px; margin-bottom: 10px;">
 
   <div class="settings-section" style="text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; min-width: 230px; flex-grow: 1; box-sizing: border-box;">
-    <h3 style="margin-top:0; margin-bottom: 12px; font-size: 1.1em; color: #333;">Dimensões</h3>
-    <div style="margin-bottom: 10px;">
-      <label for="board-width-select" style="display: inline-block; margin-bottom: 5px;">Largura (4-7):</label><br>
-      <select id="board-width-select" style="padding: 5px;">
-        <option value="4">4</option>
-        <option value="5">5</option>
-        <option value="6">6</option>
-        <option value="7" selected>7</option>
-      </select>
-    </div>
+    <h3 style="margin-top:0; margin-bottom: 12px; font-size: 1.1em; color: #333;">Tamanho do Tabuleiro</h3>
     <div>
-      <label for="board-height-select" style="display: inline-block; margin-bottom: 5px;">Altura (4-7):</label><br>
-      <select id="board-height-select" style="padding: 5px;">
-        <option value="4">4</option>
-        <option value="5">5</option>
-        <option value="6">6</option>
-        <option value="7" selected>7</option>
+      <label for="board-size-select" style="display: inline-block; margin-bottom: 5px;">Tamanho (LxA):</label><br>
+      <select id="board-size-select" style="padding: 5px;">
+        <option value="5x5">5x5</option>
+        <option value="6x5">6x5</option>
+        <option value="7x5">7x5</option>
+        <option value="8x5">8x5</option>
+        <option value="9x5">9x5</option>
+        <option value="10x5">10x5</option>
+        <option value="6x6">6x6</option>
+        <option value="6x7">6x7</option>
+        <option value="6x8">6x8</option>
+        <option value="7x7" selected>7x7</option>
+        <option value="8x7">8x7</option>
+        <option value="custom" disabled hidden>Personalizado</option>
       </select>
     </div>
   </div>
@@ -49,7 +48,7 @@
         <input type="radio" id="player1_vs_ai" name="game_mode" value="player1_vs_ai" checked>
         <label for="player1_vs_ai">Jogador 1 vs IA</label><br>
         <input type="radio" id="player2_vs_ai" name="game_mode" value="player2_vs_ai">
-        <label for="player2_vs_ai">Jogador 2 vs IA</label><br>
+        <label for="player2_vs_ai">IA vs Jogador 2</label><br>
         <input type="radio" id="two_players" name="game_mode" value="two_players">
         <label for="two_players">2 Jogadores</label>
       </div>
@@ -89,36 +88,83 @@
   </div>
 </div>
 
+<div id="results-container">
+  <h2>Resultados vs IA</h2>
+  <table id="results-table">
+    <thead>
+    <tr>
+      <th>Tamanho / Nível</th>
+      <th>1</th>
+      <th>2</th>
+      <th>3</th>
+      <th>4</th>
+      <th>5</th>
+      <th>6</th>
+      <th>7</th>
+      <th>8</th>
+      <th>9</th>
+      <th>10</th>
+    </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
 
+<div style="text-align: center; margin: 20px 0;">
+  <button id="clear-results-button" style="background-color: #dc3545;">Limpar Resultados</button>
+</div>
 
 
 <div id="advanced-controls" style="text-align: center; margin-top:20px; display: none;">
   <button id="encode-button">Codificar Estado & Jogada IA (Depuração)</button>
   <div id="encoded-output" style="margin-top:5px; word-break: break-all;"></div>
-  <input type="text" id="decode-input" placeholder="Cole o estado codificado para carregar" style="margin-top:5px; width: 80%;">
+  <label for="decode-input"></label><input type="text" id="decode-input" placeholder="Cole o estado codificado para carregar" style="margin-top:5px; width: 80%;">
   <button id="decode-button" style="margin-top:5px;">Carregar Estado</button>
   <div id="decode-message" style="margin-top:5px;"></div>
 </div>
 
-<footer id="footerLinks">
-  <hr>
-  <p>
-    <a href="https://www.ua.pt/pt/fabrica/cnjm-jogos-matematicos-2025">CNJM</a> |
-    <a href="https://www.ua.pt/file/82609">Regras</a> |
-    Gatos e Cães |
-    <a href="https://tomasiorum.github.io/">Rastros</a> |
-    Dominório |
-    Produto |
-    <a href="https://danieloliveira1802875.github.io/atari-go/">Atari Go</a> |
-    <a href="http://solutionsupdate.ugent.be/cnjm/nex.html">Nex</a>
-  </p>
-  <p>
-    Trabalho realizado no âmbito do
-    <a href="https://guiadoscursos.uab.pt/ucs/projeto-de-engenharia-informatica/">Projeto de Engenharia Informática</a>,
-    <a href="https://guiadoscursos.uab.pt/cursos/licenciatura-em-engenharia-informatica/">LEI</a>,
-    <a href="https://portal.uab.pt/">UAb</a>
-  </p>
-</footer>
+<div id="instructions-modal" class="modal">
+  <div class="modal-content">
+    <span class="close-button">&times;</span>
+    <h2>Instruções do Jogo Rastros</h2>
+
+    <h3>Regras Básicas</h3>
+    <ul>
+      <li><strong>Objetivo:</strong> Levar a peça branca até à casa-objetivo do adversário. O Jogador 1 vence se chegar à casa marcada com "1" (canto inferior esquerdo), e o Jogador 2 vence se chegar à casa marcada com "2" (canto superior direito), independentemente do jogador que joga a peça até essa casa.</li>
+      <li><strong>Movimento:</strong> Na sua vez, cada jogador move a peça branca para uma casa adjacente (na horizontal, vertical ou diagonal) que não esteja ocupada. No tabuleiro, o jogador que deve jogar aparece é marcado a verde.</li>
+      <li><strong>Rastros:</strong> A casa que a peça branca acaba de desocupar torna-se uma casa preta, ou "rastro", e não pode ser usada novamente durante o jogo.</li>
+      <li><strong>Como Vencer:</strong> Um jogador vence de duas formas:
+        <ol>
+          <li>Alcançando a sua casa-objetivo.</li>
+          <li>Encurralando o adversário, deixando-o sem movimentos válidos possíveis.</li>
+        </ol>
+      </li>
+    </ul>
+
+    <h3>Funcionalidades do Programa</h3>
+    <ul>
+      <li><strong>Modos de Jogo:</strong> Pode escolher entre três modos:
+        <ul>
+          <li><strong>Jogador 1 vs IA:</strong> Joga como Jogador 1 contra o computador.</li>
+          <li><strong>IA vs Jogador 2:</strong> O computador joga primeiro, e você assume o papel de Jogador 2.</li>
+          <li><strong>2 Jogadores:</strong> Um modo para dois jogadores humanos. O jogo começa com o tabuleiro vazio, e o primeiro jogador clica na casa onde deseja iniciar a partida.</li>
+        </ul>
+      </li>
+      <li><strong>Nível de Dificuldade:</strong> Um seletor de nível (de 1 a 10) permite ajustar a força da inteligência artificial. Níveis mais altos significam que a IA calculará mais jogadas à frente.</li>
+      <li><strong>Ajuda da IA:</strong> Mesmo quando é a sua vez de jogar, pode usar o botão <strong>"Fazer jogada IA"</strong>. Isto fará com que a IA execute a melhor jogada que encontrou para a sua posição atual, servindo como uma ajuda ou sugestão. Por isso, mesmo em modo de 2 jogadores, pode ser relevante o nível de dificuldade que se escolhe.</li>
+      <li><strong>Histórico de Jogadas:</strong> A tabela à direita mostra um registo de todas as jogadas da partida. Clicar numa jogada específica no histórico permite visualizar o estado do tabuleiro naquele momento. Para voltar a jogar, deve iniciar um novo jogo.</li>
+      <li><strong>Resultados vs IA:</strong> Na parte inferior, uma tabela regista automaticamente o seu histórico de vitórias e derrotas contra a IA, organizado por tamanho do tabuleiro e nível de dificuldade.</li>
+    </ul>
+  </div>
+</div>
+
+<iframe
+        id="footer-iframe"
+        src="https://danieloliveira1802875.github.io/cnjm-footer/"
+        title="CNJM Footer Content"
+        scrolling="no">
+</iframe>
 
 <script src="script.js"></script>
 
