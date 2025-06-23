@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let newGameButtonElement;
     let movesTableElement;
     let gameValueSlider;
+    let difficultyWarning;
     let currentSliderValueDisplay;
     let gameModeRadios;
     let boardSizeSelect;
@@ -158,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 
-    // Lógica para desativar modos de IA para tabuleiros > 7x7
+    // Lógica para desativar modos de IA para tabuleiros
     function updateAiSupport(width, height) {
         let w = width;
         let h = height;
@@ -210,6 +211,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         gameValueSlider = document.getElementById('game-value-slider');
         currentSliderValueDisplay = document.getElementById('current-slider-value');
+        difficultyWarning= document.getElementById('difficulty-warning');
         gameModeRadios = document.querySelectorAll('input[name="game_mode"]');
 
         boardSizeSelect = document.getElementById('board-size-select');
@@ -254,7 +256,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             updateGameConstants();
 
-            if (selectedGameMode === 'two_players') {
+            if (selectedGameMode === 'two_players' && boardSizeSelect.value!=="7x7") {
+                //alert(boardSizeSelect.value);
                 // Inicia o jogo em modo de configuração, sem a peça branca
                 initGame(false, true);
                 // Mostra a instrução para colocar a peça
@@ -268,10 +271,19 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Botão Novo Jogo não encontrado!');
     }
 
+
+
     if (gameValueSlider && currentSliderValueDisplay) {
         gameValueSlider.addEventListener('input', () => {
             currentSliderValueDisplay.textContent = gameValueSlider.value;
             currentGameDifficulty = parseInt(gameValueSlider.value, 10);
+        });
+        gameValueSlider.addEventListener('input', () => {
+            if (gameValueSlider.value === '10') {
+                difficultyWarning.style.display = 'block';
+            } else {
+                difficultyWarning.style.display = 'none';
+            }
         });
     }
 
@@ -477,10 +489,21 @@ document.addEventListener('DOMContentLoaded', function() {
         //else if (selectedGameMode === 'player2_vs_ai' && currentPlayer === 1) isAITurn = true;
 
         const encodedState = encodeCurrentStateOnly();
-        const dificuldade = 2 + (currentGameDifficulty - 1) * 5;
+        //Transforma a dificuldade selecionada numa dificuldade para chamar a IA, usando uma função que distribua os 10 níveis em graus crescentes de dificuldade
+        //const dificuldade = 2 + (currentGameDifficulty - 1) * 5;
+        const niveis= [2, 3, 4, 5, 6,7,8,10,12,56];
+        const dificuldade = niveis[currentGameDifficulty -1];
+        let tempo;
+        if (currentGameDifficulty===10) {
+            tempo=2000;
+        }
+        else {
+            tempo=1000;
+        }
 
         try {
-            const aiMoveIndex = jogoModuleInstance._jogadaSite(encodedState, dificuldade, boardHeight, boardWidth);
+            const aiMoveIndex = jogoModuleInstance._jogadaSite(encodedState, dificuldade, boardHeight, boardWidth, tempo);
+            //alert (dificuldade);
             //alert(encodedState);
             //const aiMoveIndex = jogoModuleInstance._jogadaSite(encodedState, dificuldade, 5, 5);
 
@@ -760,7 +783,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Reseta os estados no início de cada jogo
+        // Limpa os estados no início de cada jogo
         gameActive = false;
         isPlacingStartingPiece = false;
 
